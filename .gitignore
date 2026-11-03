@@ -16,3 +16,8 @@ backend/output/
 # OS / editor
 .DS_Store
 Thumbs.db
+
+# BattLeDIM downloads and rebuilt data (see backend/battledim/README.md)
+*.inp.ltown
+ltown_*.npz
+ltown_locator.joblib

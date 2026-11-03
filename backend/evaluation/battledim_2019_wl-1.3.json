@@ -1,0 +1,508 @@
+{
+ "summary": {
+  "year": 2019,
+  "ruleset": "wl-1.3",
+  "nights_scored": 308,
+  "leaks_total": 23,
+  "leaks_testable": 16,
+  "found": 13,
+  "found_rate": 0.812,
+  "abrupt": {
+   "n": 6,
+   "found": 4
+  },
+  "incipient": {
+   "n": 10,
+   "found": 9
+  },
+  "days_to_find_median": 5.6,
+  "found_within": {
+   "3": 5,
+   "7": 7,
+   "30": 13
+  },
+  "scored_from": "27 Feb",
+  "alerts": 14,
+  "false_alarms": 7,
+  "false_alarms_per_month": 0.69,
+  "sensor_to_leak_median_m": 1275.0,
+  "within_search_radius": 0.462,
+  "search_radius_m": 1200,
+  "nearest_sensor_median_m": 145.0
+ },
+ "leaks": [
+  {
+   "pipe": "p257",
+   "kind": "incipient",
+   "start": "2019-01-01",
+   "end": "2019-12-31",
+   "peak_m3h": 6.9,
+   "nearest_sensor_m": 160,
+   "testable": false,
+   "result": "already leaking on 1 Jan, nothing to compare with"
+  },
+  {
+   "pipe": "p427",
+   "kind": "incipient",
+   "start": "2019-01-01",
+   "end": "2019-12-31",
+   "peak_m3h": 5.1,
+   "nearest_sensor_m": 165,
+   "testable": false,
+   "result": "already leaking on 1 Jan, nothing to compare with"
+  },
+  {
+   "pipe": "p810",
+   "kind": "incipient",
+   "start": "2019-01-01",
+   "end": "2019-12-31",
+   "peak_m3h": 6.9,
+   "nearest_sensor_m": 168,
+   "testable": false,
+   "result": "already leaking on 1 Jan, nothing to compare with"
+  },
+  {
+   "pipe": "p654",
+   "kind": "incipient",
+   "start": "2019-01-01",
+   "end": "2019-12-31",
+   "peak_m3h": 5.5,
+   "nearest_sensor_m": 160,
+   "testable": false,
+   "result": "already leaking on 1 Jan, nothing to compare with"
+  },
+  {
+   "pipe": "p523",
+   "kind": "abrupt",
+   "start": "2019-01-15",
+   "end": "2019-02-01",
+   "peak_m3h": 28.4,
+   "nearest_sensor_m": 85,
+   "testable": false,
+   "result": "before scoring starts"
+  },
+  {
+   "pipe": "p827",
+   "kind": "abrupt",
+   "start": "2019-01-24",
+   "end": "2019-02-07",
+   "peak_m3h": 26.5,
+   "nearest_sensor_m": 73,
+   "testable": false,
+   "result": "before scoring starts"
+  },
+  {
+   "pipe": "p280",
+   "kind": "abrupt",
+   "start": "2019-02-10",
+   "end": "2019-12-31",
+   "peak_m3h": 5.3,
+   "nearest_sensor_m": 73,
+   "testable": false,
+   "result": "before scoring starts"
+  },
+  {
+   "pipe": "p653",
+   "kind": "incipient",
+   "start": "2019-03-03",
+   "end": "2019-05-05",
+   "peak_m3h": 18.3,
+   "nearest_sensor_m": 211,
+   "testable": true,
+   "result": "found",
+   "days_to_find": 5.6,
+   "alert_date": "09 Mar",
+   "level": "watch",
+   "sensor": "n54",
+   "sensor_to_leak_m": 963,
+   "in_radius": true
+  },
+  {
+   "pipe": "p710",
+   "kind": "abrupt",
+   "start": "2019-03-24",
+   "end": "2019-12-31",
+   "peak_m3h": 5.6,
+   "nearest_sensor_m": 52,
+   "testable": true,
+   "result": "found",
+   "days_to_find": 0.6,
+   "alert_date": "25 Mar",
+   "level": "watch",
+   "sensor": "n1",
+   "sensor_to_leak_m": 1857,
+   "in_radius": false
+  },
+  {
+   "pipe": "p514",
+   "kind": "abrupt",
+   "start": "2019-04-02",
+   "end": "2019-05-23",
+   "peak_m3h": 15.6,
+   "nearest_sensor_m": 77,
+   "testable": true,
+   "result": "found",
+   "days_to_find": 0.3,
+   "alert_date": "03 Apr",
+   "level": "high",
+   "sensor": "n332",
+   "sensor_to_leak_m": 77,
+   "in_radius": true
+  },
+  {
+   "pipe": "p331",
+   "kind": "abrupt",
+   "start": "2019-04-20",
+   "end": "2019-12-31",
+   "peak_m3h": 10.9,
+   "nearest_sensor_m": 128,
+   "testable": true,
+   "result": "started while another alert was open"
+  },
+  {
+   "pipe": "p193",
+   "kind": "incipient",
+   "start": "2019-05-19",
+   "end": "2019-12-31",
+   "peak_m3h": 10.4,
+   "nearest_sensor_m": 155,
+   "testable": true,
+   "result": "found",
+   "days_to_find": 25.7,
+   "alert_date": "14 Jun",
+   "level": "high",
+   "sensor": "n613",
+   "sensor_to_leak_m": 1388,
+   "in_radius": false
+  },
+  {
+   "pipe": "p277",
+   "kind": "incipient",
+   "start": "2019-05-30",
+   "end": "2019-12-31",
+   "peak_m3h": 7.4,
+   "nearest_sensor_m": 275,
+   "testable": true,
+   "result": "found",
+   "days_to_find": 14.3,
+   "alert_date": "14 Jun",
+   "level": "high",
+   "sensor": "n613",
+   "sensor_to_leak_m": 1275,
+   "in_radius": false
+  },
+  {
+   "pipe": "p142",
+   "kind": "abrupt",
+   "start": "2019-06-12",
+   "end": "2019-07-17",
+   "peak_m3h": 27.0,
+   "nearest_sensor_m": 209,
+   "testable": true,
+   "result": "found",
+   "days_to_find": 1.3,
+   "alert_date": "14 Jun",
+   "level": "high",
+   "sensor": "n613",
+   "sensor_to_leak_m": 209,
+   "in_radius": true
+  },
+  {
+   "pipe": "p680",
+   "kind": "abrupt",
+   "start": "2019-07-10",
+   "end": "2019-12-31",
+   "peak_m3h": 5.4,
+   "nearest_sensor_m": 77,
+   "testable": true,
+   "result": "started while another alert was open"
+  },
+  {
+   "pipe": "p586",
+   "kind": "incipient",
+   "start": "2019-07-26",
+   "end": "2019-09-16",
+   "peak_m3h": 20.5,
+   "nearest_sensor_m": 144,
+   "testable": true,
+   "result": "found",
+   "days_to_find": 23.6,
+   "alert_date": "19 Aug",
+   "level": "watch",
+   "sensor": "n1",
+   "sensor_to_leak_m": 1367,
+   "in_radius": false
+  },
+  {
+   "pipe": "p721",
+   "kind": "incipient",
+   "start": "2019-08-02",
+   "end": "2019-12-31",
+   "peak_m3h": 13.2,
+   "nearest_sensor_m": 59,
+   "testable": true,
+   "result": "found",
+   "days_to_find": 17.0,
+   "alert_date": "19 Aug",
+   "level": "watch",
+   "sensor": "n1",
+   "sensor_to_leak_m": 1850,
+   "in_radius": false
+  },
+  {
+   "pipe": "p800",
+   "kind": "incipient",
+   "start": "2019-08-16",
+   "end": "2019-10-01",
+   "peak_m3h": 22.0,
+   "nearest_sensor_m": 72,
+   "testable": true,
+   "result": "found",
+   "days_to_find": 2.6,
+   "alert_date": "19 Aug",
+   "level": "watch",
+   "sensor": "n1",
+   "sensor_to_leak_m": 2470,
+   "in_radius": false
+  },
+  {
+   "pipe": "p123",
+   "kind": "incipient",
+   "start": "2019-09-13",
+   "end": "2019-12-31",
+   "peak_m3h": 9.2,
+   "nearest_sensor_m": 150,
+   "testable": true,
+   "result": "started while another alert was open"
+  },
+  {
+   "pipe": "p455",
+   "kind": "incipient",
+   "start": "2019-10-03",
+   "end": "2019-12-31",
+   "peak_m3h": 11.1,
+   "nearest_sensor_m": 87,
+   "testable": true,
+   "result": "found",
+   "days_to_find": 23.6,
+   "alert_date": "27 Oct",
+   "level": "high",
+   "sensor": "n54",
+   "sensor_to_leak_m": 893,
+   "in_radius": true
+  },
+  {
+   "pipe": "p762",
+   "kind": "incipient",
+   "start": "2019-10-09",
+   "end": "2019-12-31",
+   "peak_m3h": 15.7,
+   "nearest_sensor_m": 216,
+   "testable": true,
+   "result": "found",
+   "days_to_find": 17.7,
+   "alert_date": "27 Oct",
+   "level": "high",
+   "sensor": "n54",
+   "sensor_to_leak_m": 1558,
+   "in_radius": false
+  },
+  {
+   "pipe": "p426",
+   "kind": "abrupt",
+   "start": "2019-10-25",
+   "end": "2019-12-31",
+   "peak_m3h": 13.6,
+   "nearest_sensor_m": 214,
+   "testable": true,
+   "result": "found",
+   "days_to_find": 1.6,
+   "alert_date": "27 Oct",
+   "level": "high",
+   "sensor": "n54",
+   "sensor_to_leak_m": 645,
+   "in_radius": true
+  },
+  {
+   "pipe": "p879",
+   "kind": "incipient",
+   "start": "2019-11-20",
+   "end": "2019-12-31",
+   "peak_m3h": 10.9,
+   "nearest_sensor_m": 146,
+   "testable": true,
+   "result": "found",
+   "days_to_find": 4.7,
+   "alert_date": "25 Nov",
+   "level": "watch",
+   "sensor": "n288",
+   "sensor_to_leak_m": 627,
+   "in_radius": true
+  }
+ ],
+ "alerts": [
+  {
+   "open_day": 67,
+   "max_score": 38,
+   "level": "watch",
+   "sensor": "n54",
+   "drop_mm": 455,
+   "nights": 1,
+   "date": "09 Mar",
+   "leaks": [
+    "p653"
+   ]
+  },
+  {
+   "open_day": 75,
+   "max_score": 38,
+   "level": "watch",
+   "sensor": "n54",
+   "drop_mm": 779,
+   "nights": 1,
+   "date": "17 Mar"
+  },
+  {
+   "open_day": 83,
+   "max_score": 26,
+   "level": "watch",
+   "sensor": "n1",
+   "drop_mm": 0,
+   "nights": 2,
+   "date": "25 Mar",
+   "leaks": [
+    "p710"
+   ]
+  },
+  {
+   "open_day": 87,
+   "max_score": 26,
+   "level": "watch",
+   "sensor": "n1",
+   "drop_mm": 0,
+   "nights": 2,
+   "date": "29 Mar"
+  },
+  {
+   "open_day": 92,
+   "max_score": 56,
+   "level": "high",
+   "sensor": "n332",
+   "drop_mm": 311,
+   "nights": 30,
+   "date": "03 Apr",
+   "leaks": [
+    "p514"
+   ]
+  },
+  {
+   "open_day": 164,
+   "max_score": 64,
+   "level": "high",
+   "sensor": "n613",
+   "drop_mm": 473,
+   "nights": 21,
+   "date": "14 Jun",
+   "leaks": [
+    "p193",
+    "p277",
+    "p142"
+   ]
+  },
+  {
+   "open_day": 190,
+   "max_score": 44,
+   "level": "watch",
+   "sensor": "n288",
+   "drop_mm": 280,
+   "nights": 8,
+   "date": "10 Jul"
+  },
+  {
+   "open_day": 230,
+   "max_score": 22,
+   "level": "watch",
+   "sensor": "n1",
+   "drop_mm": 0,
+   "nights": 1,
+   "date": "19 Aug",
+   "leaks": [
+    "p586",
+    "p721",
+    "p800"
+   ]
+  },
+  {
+   "open_day": 233,
+   "max_score": 64,
+   "level": "high",
+   "sensor": "n288",
+   "drop_mm": 64,
+   "nights": 25,
+   "date": "22 Aug"
+  },
+  {
+   "open_day": 299,
+   "max_score": 48,
+   "level": "high",
+   "sensor": "n54",
+   "drop_mm": 859,
+   "nights": 13,
+   "date": "27 Oct",
+   "leaks": [
+    "p455",
+    "p762",
+    "p426"
+   ]
+  },
+  {
+   "open_day": 315,
+   "max_score": 30,
+   "level": "watch",
+   "sensor": "n1",
+   "drop_mm": 0,
+   "nights": 4,
+   "date": "12 Nov"
+  },
+  {
+   "open_day": 328,
+   "max_score": 38,
+   "level": "watch",
+   "sensor": "n288",
+   "drop_mm": 358,
+   "nights": 2,
+   "date": "25 Nov",
+   "leaks": [
+    "p879"
+   ]
+  },
+  {
+   "open_day": 333,
+   "max_score": 22,
+   "level": "watch",
+   "sensor": "n1",
+   "drop_mm": 0,
+   "nights": 1,
+   "date": "30 Nov"
+  },
+  {
+   "open_day": 337,
+   "max_score": 48,
+   "level": "high",
+   "sensor": "n288",
+   "drop_mm": 186,
+   "nights": 3,
+   "date": "04 Dec"
+  }
+ ],
+ "false_alarm_dates": [
+  "17 Mar",
+  "29 Mar",
+  "10 Jul",
+  "22 Aug",
+  "12 Nov",
+  "30 Nov",
+  "04 Dec"
+ ],
+ "method": "Rules only, signals computed as in the app. Data rebuilt with battledim/simulate_ltown.py from the official L-Town network and leak list (EPANET 2.2, leaks as emitters)."
+}

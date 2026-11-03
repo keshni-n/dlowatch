@@ -1,0 +1,529 @@
+{
+ "trained_on": "L-TOWN_v2_Model.inp (the utility's model) + 2018 night noise",
+ "tested_on": "2019",
+ "training_leaks": 12000,
+ "areas": 30,
+ "avg_area_radius_m": 181,
+ "simulated_holdout": {
+  "scenarios": 2400,
+  "area_top1": 0.477,
+  "area_top3": 0.8,
+  "median_error_m": 113
+ },
+ "validation_2018": {
+  "alert_night": {
+   "leaks": 8,
+   "model_median_m": 502,
+   "rules_median_m": 885,
+   "model_within_500m": 4,
+   "rules_within_500m": 4,
+   "area_top3_classifier": 3,
+   "area_top3_near_point": 1
+  },
+  "week_after": {
+   "leaks": 10,
+   "model_median_m": 167,
+   "rules_median_m": 185,
+   "model_within_500m": 8,
+   "rules_within_500m": 7,
+   "area_top3_classifier": 7,
+   "area_top3_near_point": 5
+  }
+ },
+ "test_2019": {
+  "alert_night": {
+   "leaks": 13,
+   "model_median_m": 803,
+   "rules_median_m": 1249,
+   "model_within_500m": 5,
+   "rules_within_500m": 2,
+   "area_top3_classifier": 3,
+   "area_top3_near_point": 4
+  },
+  "week_after": {
+   "leaks": 16,
+   "model_median_m": 938,
+   "rules_median_m": 1308,
+   "model_within_500m": 4,
+   "rules_within_500m": 3,
+   "area_top3_classifier": 2,
+   "area_top3_near_point": 3
+  }
+ },
+ "cases": {
+  "2018": [
+   {
+    "pipe": "p673",
+    "kind": "abrupt",
+    "case": "week_after",
+    "model_error_m": 108,
+    "area_top3_classifier": true,
+    "area_top3_near_point": true,
+    "rules_sensor": "n229",
+    "rules_error_m": 104
+   },
+   {
+    "pipe": "p673",
+    "kind": "abrupt",
+    "case": "alert_night",
+    "model_error_m": 121,
+    "area_top3_classifier": false,
+    "area_top3_near_point": true,
+    "rules_sensor": "n229",
+    "rules_error_m": 104
+   },
+   {
+    "pipe": "p810",
+    "kind": "incipient",
+    "case": "week_after",
+    "model_error_m": 2152,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n4",
+    "rules_error_m": 2413
+   },
+   {
+    "pipe": "p810",
+    "kind": "incipient",
+    "case": "alert_night",
+    "model_error_m": 1703,
+    "area_top3_classifier": true,
+    "area_top3_near_point": false,
+    "rules_sensor": "n4",
+    "rules_error_m": 2413
+   },
+   {
+    "pipe": "p628",
+    "kind": "incipient",
+    "case": "week_after",
+    "model_error_m": 119,
+    "area_top3_classifier": true,
+    "area_top3_near_point": true,
+    "rules_sensor": "n613",
+    "rules_error_m": 320
+   },
+   {
+    "pipe": "p628",
+    "kind": "incipient",
+    "case": "alert_night",
+    "model_error_m": 584,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n4",
+    "rules_error_m": 1349
+   },
+   {
+    "pipe": "p538",
+    "kind": "abrupt",
+    "case": "week_after",
+    "model_error_m": 242,
+    "area_top3_classifier": true,
+    "area_top3_near_point": true,
+    "rules_sensor": "n613",
+    "rules_error_m": 858
+   },
+   {
+    "pipe": "p866",
+    "kind": "abrupt",
+    "case": "week_after",
+    "model_error_m": 113,
+    "area_top3_classifier": true,
+    "area_top3_near_point": true,
+    "rules_sensor": "n296",
+    "rules_error_m": 141
+   },
+   {
+    "pipe": "p31",
+    "kind": "incipient",
+    "case": "week_after",
+    "model_error_m": 406,
+    "area_top3_classifier": true,
+    "area_top3_near_point": false,
+    "rules_sensor": "n31",
+    "rules_error_m": 147
+   },
+   {
+    "pipe": "p31",
+    "kind": "incipient",
+    "case": "alert_night",
+    "model_error_m": 421,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n4",
+    "rules_error_m": 421
+   },
+   {
+    "pipe": "p654",
+    "kind": "incipient",
+    "case": "week_after",
+    "model_error_m": 536,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n31",
+    "rules_error_m": 1112
+   },
+   {
+    "pipe": "p654",
+    "kind": "incipient",
+    "case": "alert_night",
+    "model_error_m": 725,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n4",
+    "rules_error_m": 1390
+   },
+   {
+    "pipe": "p183",
+    "kind": "abrupt",
+    "case": "week_after",
+    "model_error_m": 101,
+    "area_top3_classifier": true,
+    "area_top3_near_point": true,
+    "rules_sensor": "n752",
+    "rules_error_m": 102
+   },
+   {
+    "pipe": "p183",
+    "kind": "abrupt",
+    "case": "alert_night",
+    "model_error_m": 1695,
+    "area_top3_classifier": true,
+    "area_top3_near_point": false,
+    "rules_sensor": "n4",
+    "rules_error_m": 2401
+   },
+   {
+    "pipe": "p158",
+    "kind": "abrupt",
+    "case": "week_after",
+    "model_error_m": 73,
+    "area_top3_classifier": true,
+    "area_top3_near_point": false,
+    "rules_sensor": "n644",
+    "rules_error_m": 61
+   },
+   {
+    "pipe": "p158",
+    "kind": "abrupt",
+    "case": "alert_night",
+    "model_error_m": 63,
+    "area_top3_classifier": true,
+    "area_top3_near_point": false,
+    "rules_sensor": "n644",
+    "rules_error_m": 61
+   },
+   {
+    "pipe": "p369",
+    "kind": "abrupt",
+    "case": "week_after",
+    "model_error_m": 215,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n410",
+    "rules_error_m": 223
+   },
+   {
+    "pipe": "p369",
+    "kind": "abrupt",
+    "case": "alert_night",
+    "model_error_m": 200,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n410",
+    "rules_error_m": 223
+   }
+  ],
+  "2019": [
+   {
+    "pipe": "p653",
+    "kind": "incipient",
+    "case": "week_after",
+    "model_error_m": 392,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n215",
+    "rules_error_m": 407
+   },
+   {
+    "pipe": "p653",
+    "kind": "incipient",
+    "case": "alert_night",
+    "model_error_m": 593,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n54",
+    "rules_error_m": 963
+   },
+   {
+    "pipe": "p710",
+    "kind": "abrupt",
+    "case": "week_after",
+    "model_error_m": 1060,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n4",
+    "rules_error_m": 1744
+   },
+   {
+    "pipe": "p710",
+    "kind": "abrupt",
+    "case": "alert_night",
+    "model_error_m": 244,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n31",
+    "rules_error_m": 1529
+   },
+   {
+    "pipe": "p514",
+    "kind": "abrupt",
+    "case": "week_after",
+    "model_error_m": 53,
+    "area_top3_classifier": false,
+    "area_top3_near_point": true,
+    "rules_sensor": "n4",
+    "rules_error_m": 883
+   },
+   {
+    "pipe": "p514",
+    "kind": "abrupt",
+    "case": "alert_night",
+    "model_error_m": 239,
+    "area_top3_classifier": false,
+    "area_top3_near_point": true,
+    "rules_sensor": "n54",
+    "rules_error_m": 601
+   },
+   {
+    "pipe": "p331",
+    "kind": "abrupt",
+    "case": "week_after",
+    "model_error_m": 613,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n31",
+    "rules_error_m": 548
+   },
+   {
+    "pipe": "p193",
+    "kind": "incipient",
+    "case": "week_after",
+    "model_error_m": 2439,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n31",
+    "rules_error_m": 2477
+   },
+   {
+    "pipe": "p193",
+    "kind": "incipient",
+    "case": "alert_night",
+    "model_error_m": 1574,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n613",
+    "rules_error_m": 1388
+   },
+   {
+    "pipe": "p277",
+    "kind": "incipient",
+    "case": "week_after",
+    "model_error_m": 787,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n215",
+    "rules_error_m": 1581
+   },
+   {
+    "pipe": "p277",
+    "kind": "incipient",
+    "case": "alert_night",
+    "model_error_m": 1188,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n613",
+    "rules_error_m": 1275
+   },
+   {
+    "pipe": "p142",
+    "kind": "abrupt",
+    "case": "week_after",
+    "model_error_m": 116,
+    "area_top3_classifier": true,
+    "area_top3_near_point": true,
+    "rules_sensor": "n613",
+    "rules_error_m": 209
+   },
+   {
+    "pipe": "p142",
+    "kind": "abrupt",
+    "case": "alert_night",
+    "model_error_m": 100,
+    "area_top3_classifier": true,
+    "area_top3_near_point": true,
+    "rules_sensor": "n613",
+    "rules_error_m": 209
+   },
+   {
+    "pipe": "p680",
+    "kind": "abrupt",
+    "case": "week_after",
+    "model_error_m": 1277,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n1",
+    "rules_error_m": 1873
+   },
+   {
+    "pipe": "p586",
+    "kind": "incipient",
+    "case": "week_after",
+    "model_error_m": 1062,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n1",
+    "rules_error_m": 1367
+   },
+   {
+    "pipe": "p586",
+    "kind": "incipient",
+    "case": "alert_night",
+    "model_error_m": 66,
+    "area_top3_classifier": true,
+    "area_top3_near_point": true,
+    "rules_sensor": "n549",
+    "rules_error_m": 144
+   },
+   {
+    "pipe": "p721",
+    "kind": "incipient",
+    "case": "week_after",
+    "model_error_m": 1233,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n549",
+    "rules_error_m": 1249
+   },
+   {
+    "pipe": "p721",
+    "kind": "incipient",
+    "case": "alert_night",
+    "model_error_m": 1183,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n549",
+    "rules_error_m": 1249
+   },
+   {
+    "pipe": "p800",
+    "kind": "incipient",
+    "case": "week_after",
+    "model_error_m": 1169,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n549",
+    "rules_error_m": 2009
+   },
+   {
+    "pipe": "p800",
+    "kind": "incipient",
+    "case": "alert_night",
+    "model_error_m": 1947,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n549",
+    "rules_error_m": 2009
+   },
+   {
+    "pipe": "p123",
+    "kind": "incipient",
+    "case": "week_after",
+    "model_error_m": 1636,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n296",
+    "rules_error_m": 1689
+   },
+   {
+    "pipe": "p455",
+    "kind": "incipient",
+    "case": "week_after",
+    "model_error_m": 817,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n31",
+    "rules_error_m": 775
+   },
+   {
+    "pipe": "p455",
+    "kind": "incipient",
+    "case": "alert_night",
+    "model_error_m": 1269,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n54",
+    "rules_error_m": 893
+   },
+   {
+    "pipe": "p762",
+    "kind": "incipient",
+    "case": "week_after",
+    "model_error_m": 1774,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n31",
+    "rules_error_m": 1799
+   },
+   {
+    "pipe": "p762",
+    "kind": "incipient",
+    "case": "alert_night",
+    "model_error_m": 803,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n54",
+    "rules_error_m": 1558
+   },
+   {
+    "pipe": "p426",
+    "kind": "abrupt",
+    "case": "week_after",
+    "model_error_m": 194,
+    "area_top3_classifier": true,
+    "area_top3_near_point": true,
+    "rules_sensor": "n429",
+    "rules_error_m": 359
+   },
+   {
+    "pipe": "p426",
+    "kind": "abrupt",
+    "case": "alert_night",
+    "model_error_m": 139,
+    "area_top3_classifier": true,
+    "area_top3_near_point": true,
+    "rules_sensor": "n54",
+    "rules_error_m": 645
+   },
+   {
+    "pipe": "p879",
+    "kind": "incipient",
+    "case": "week_after",
+    "model_error_m": 629,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n288",
+    "rules_error_m": 627
+   },
+   {
+    "pipe": "p879",
+    "kind": "incipient",
+    "case": "alert_night",
+    "model_error_m": 960,
+    "area_top3_classifier": false,
+    "area_top3_near_point": false,
+    "rules_sensor": "n54",
+    "rules_error_m": 2221
+   }
+  ]
+ }
+}

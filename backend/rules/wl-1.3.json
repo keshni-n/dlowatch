@@ -1,0 +1,144 @@
+{
+  "version": "wl-1.3",
+  "description": "Same points as wl-1.2, plus two checks tuned on BattLeDIM L-Town 2018 (then tested on 2019): the usual night is the same weekday over the last 4 weeks, so busy weekend nights are not leaks; and a pressure sensor's drop only counts if it is more than 3 times that sensor's usual night-to-night wobble. Both need 4 weeks of history. With less, the app falls back to wl-1.2 behaviour and says so on the alert.",
+  "published": "2026-11-02",
+  "bands": {
+    "watch": 20,
+    "high": 45,
+    "critical": 70
+  },
+  "trust": {
+    "full": 80,
+    "min": 50
+  },
+  "points": {
+    "night_pct": [
+      [
+        30,
+        30
+      ],
+      [
+        15,
+        22
+      ],
+      [
+        6,
+        14
+      ]
+    ],
+    "now_pct": [
+      [
+        5,
+        20
+      ],
+      [
+        2,
+        14
+      ]
+    ],
+    "balance_pct": [
+      [
+        6,
+        18
+      ],
+      [
+        2,
+        12
+      ]
+    ],
+    "pressure_mm": [
+      [
+        60,
+        18
+      ],
+      [
+        10,
+        12
+      ]
+    ],
+    "nights_running": {
+      "min_nights": 2,
+      "points": 8
+    },
+    "burst": 20,
+    "ai_probability": [
+      [
+        0.9,
+        15
+      ],
+      [
+        0.7,
+        10
+      ]
+    ],
+    "ai_area": {
+      "min_probability": 0.4,
+      "points": 8
+    },
+    "public": {
+      "min_phones": 3,
+      "points": 10,
+      "points_without_meters": 22,
+      "one_report": 4
+    }
+  },
+  "caps": {
+    "ai_total": 20,
+    "public_only_max": 44,
+    "max": 100
+  },
+  "dedupe": true,
+  "facts": {
+    "NF-01": "extra water at the inlet meter",
+    "NF-03": "extra water at the inlet meter",
+    "WB-01": "extra water at the inlet meter"
+  },
+  "ground_ai": true,
+  "grounding": {
+    "area_drop_mm": 10,
+    "area_margin_m": 300
+  },
+  "fallback_search": {
+    "radius_m": 1200
+  },
+  "interactions": [
+    {
+      "id": "IX-1",
+      "points": 8,
+      "finding": "Flow rise and pressure drop together",
+      "any_a": [
+        "NF-01",
+        "NF-03",
+        "WB-01"
+      ],
+      "any_b": [
+        "PR-01"
+      ]
+    }
+  ],
+  "floors": [
+    {
+      "id": "FL-BURST",
+      "min": 70,
+      "all": [
+        "PR-02"
+      ],
+      "any": [
+        "NF-01",
+        "NF-03"
+      ],
+      "note": "Burst rule: sudden pressure drop plus a flow jump is at least Critical."
+    }
+  ],
+  "persistence": {
+    "min_nights": 2
+  },
+  "baseline": {
+    "mode": "same_weekday",
+    "weeks": 4
+  },
+  "pressure_check": {
+    "spread_k": 3,
+    "history_nights": 28
+  }
+}
