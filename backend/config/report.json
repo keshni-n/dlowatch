@@ -1,0 +1,7 @@
+{
+  "_note": "Settings for the weekly water loss report.",
+  "water_cost_rs_per_m3": null,
+  "_cost_note": "Cost of producing and treating one m3 of water, in rupees. Leave null to hide money in the report. Put the CWA's real figure here, do not guess.",
+  "currency": "Rs",
+  "default_days": 7
+}

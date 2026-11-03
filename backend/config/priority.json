@@ -1,0 +1,28 @@
+{
+  "_note": "Settings for the repair-priority list and the pipe suspects. Values marked 'assumption' should be replaced with the utility's own figures.",
+  "weights": {
+    "water": 0.7,
+    "households": 0.15,
+    "ease": 0.15
+  },
+  "household_use_litres_per_day": 600,
+  "_household_note": "assumption: average water use of one household, used to turn the demand in a search area into a number of households",
+  "suspects": {
+    "top": 5,
+    "stretch_size_m": 300,
+    "location_spread_m": 300,
+    "_note": "Pipes are grouped into square blocks of stretch_size_m, named after their main street. Each pipe is rated by its search-area likelihood and its distance to the best guess (location_spread_m). Tested on 64 simulated leaks: the leak was in the first block 27% of the time, in the top 3 blocks 47%, in the top 5 blocks 67%.",
+    "max_pipes_per_stretch": 25
+  },
+  "ease": {
+    "big_pipe_mm": 300,
+    "medium_pipe_mm": 200,
+    "busy_roads": [
+      "trunk",
+      "trunk_link",
+      "primary",
+      "primary_link"
+    ],
+    "wide_search_km": 2.0
+  }
+}

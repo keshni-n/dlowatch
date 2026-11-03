@@ -1,0 +1,19 @@
+{
+  "_note": "The live network. Leaks start in the simulated network at random; the detector only sees the meters. leaks_per_day is for the whole network.",
+  "leaks_per_day": 4,
+  "size_mix": {
+    "small": 0.35,
+    "medium": 0.35,
+    "large": 0.3
+  },
+  "max_active_leaks": 6,
+  "scan_minutes": 5,
+  "realert_cooldown_hours": 6,
+  "burst_flow_pct": 5,
+  "burst_drop_mm": 60,
+  "needs_one_of": [
+    "NF-01",
+    "NF-03",
+    "PR-01"
+  ]
+}

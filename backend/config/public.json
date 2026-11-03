@@ -1,0 +1,6 @@
+{
+  "_note": "Limits for public reports, to stop spam. A phone is identified by a random id it keeps, not by personal data.",
+  "max_reports_per_phone_per_hour": 5,
+  "max_reports_per_phone_per_day": 15,
+  "same_photo_block_hours": 24
+}

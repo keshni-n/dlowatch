@@ -1,0 +1,57 @@
+{
+  "_note": "Demo accounts, crew logins and crews. Each section replaces the built-in default. For a real deployment use a database with hashed passwords.",
+  "staff": {
+    "operator@dlowatch.mu": {
+      "password": "demo123",
+      "role": "operator",
+      "name": "Night operator"
+    },
+    "admin@dlowatch.mu": {
+      "password": "admin123",
+      "role": "admin",
+      "name": "Admin"
+    },
+    "manager@dlowatch.mu": {
+      "password": "manager123",
+      "role": "manager",
+      "name": "Network manager"
+    }
+  },
+  "crew_logins": {
+    "CW-0108": {
+      "pin": "1111",
+      "crew_id": "C1",
+      "name": "Crew 1"
+    },
+    "CW-0217": {
+      "pin": "1234",
+      "crew_id": "C2",
+      "name": "Crew 2"
+    },
+    "CW-0350": {
+      "pin": "3333",
+      "crew_id": "C3",
+      "name": "Maintenance"
+    }
+  },
+  "crews": {
+    "C1": {
+      "id": "C1",
+      "name": "Crew 1",
+      "people": "2 people · van",
+      "base": "Port Louis depot"
+    },
+    "C2": {
+      "id": "C2",
+      "name": "Crew 2",
+      "people": "2 people · van",
+      "base": "Pamplemousses depot"
+    },
+    "C3": {
+      "id": "C3",
+      "name": "Maintenance",
+      "people": "Meter and sensor team",
+      "base": "Head office"
+    }
+  }
+}
