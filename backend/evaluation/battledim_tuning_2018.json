@@ -1,0 +1,134 @@
+[
+ {
+  "baseline": "rolling",
+  "spread_k": 0,
+  "found": 6,
+  "within_7_days": 5,
+  "testable": 10,
+  "false_alarms": 19,
+  "per_month": 1.88,
+  "days_to_find": 0.6,
+  "nights": 308
+ },
+ {
+  "baseline": "rolling",
+  "spread_k": 2,
+  "found": 8,
+  "within_7_days": 7,
+  "testable": 10,
+  "false_alarms": 24,
+  "per_month": 2.37,
+  "days_to_find": 0.6,
+  "nights": 308
+ },
+ {
+  "baseline": "rolling",
+  "spread_k": 3,
+  "found": 8,
+  "within_7_days": 7,
+  "testable": 10,
+  "false_alarms": 22,
+  "per_month": 2.17,
+  "days_to_find": 0.9,
+  "nights": 308
+ },
+ {
+  "baseline": "rolling",
+  "spread_k": 4,
+  "found": 8,
+  "within_7_days": 7,
+  "testable": 10,
+  "false_alarms": 22,
+  "per_month": 2.17,
+  "days_to_find": 0.9,
+  "nights": 308
+ },
+ {
+  "baseline": "rolling",
+  "spread_k": 5,
+  "found": 8,
+  "within_7_days": 7,
+  "testable": 10,
+  "false_alarms": 22,
+  "per_month": 2.17,
+  "days_to_find": 0.9,
+  "nights": 308
+ },
+ {
+  "baseline": "rolling",
+  "spread_k": 6,
+  "found": 8,
+  "within_7_days": 7,
+  "testable": 10,
+  "false_alarms": 22,
+  "per_month": 2.17,
+  "days_to_find": 1.1,
+  "nights": 308
+ },
+ {
+  "baseline": "same_weekday",
+  "spread_k": 0,
+  "found": 3,
+  "within_7_days": 3,
+  "testable": 10,
+  "false_alarms": 3,
+  "per_month": 0.3,
+  "days_to_find": 0.1,
+  "nights": 308
+ },
+ {
+  "baseline": "same_weekday",
+  "spread_k": 2,
+  "found": 6,
+  "within_7_days": 5,
+  "testable": 10,
+  "false_alarms": 7,
+  "per_month": 0.69,
+  "days_to_find": 0.8,
+  "nights": 308
+ },
+ {
+  "baseline": "same_weekday",
+  "spread_k": 3,
+  "found": 8,
+  "within_7_days": 7,
+  "testable": 10,
+  "false_alarms": 4,
+  "per_month": 0.39,
+  "days_to_find": 1.0,
+  "nights": 308
+ },
+ {
+  "baseline": "same_weekday",
+  "spread_k": 4,
+  "found": 8,
+  "within_7_days": 7,
+  "testable": 10,
+  "false_alarms": 4,
+  "per_month": 0.39,
+  "days_to_find": 1.0,
+  "nights": 308
+ },
+ {
+  "baseline": "same_weekday",
+  "spread_k": 5,
+  "found": 8,
+  "within_7_days": 8,
+  "testable": 10,
+  "false_alarms": 5,
+  "per_month": 0.49,
+  "days_to_find": 0.3,
+  "nights": 308
+ },
+ {
+  "baseline": "same_weekday",
+  "spread_k": 6,
+  "found": 8,
+  "within_7_days": 8,
+  "testable": 10,
+  "false_alarms": 4,
+  "per_month": 0.39,
+  "days_to_find": 0.3,
+  "nights": 308
+ }
+]

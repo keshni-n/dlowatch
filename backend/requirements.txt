@@ -1,0 +1,12 @@
+wntr>=1.1
+osmnx>=2.0
+pandas
+numpy
+networkx
+pyproj
+matplotlib
+joblib
+# the trained models were saved with this version, keep it pinned
+scikit-learn==1.6.1
+# optional, only for --dem
+rasterio

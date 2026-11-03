@@ -5,6 +5,19 @@ __pycache__/
 venv/
 .env
 
+# Big or generated network files (keep them locally, see README)
+backend/output_north/models/*.joblib
+backend/output_north/north_streets.graphml
+backend/output_north/network_map.html
+backend/output_north/_api_*
+backend/cache/
+backend/output/
+
 # OS / editor
 .DS_Store
 Thumbs.db
+
+# BattLeDIM downloads and rebuilt data (see backend/battledim/README.md)
+*.inp.ltown
+ltown_*.npz
+ltown_locator.joblib

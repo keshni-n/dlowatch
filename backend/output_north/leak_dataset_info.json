@@ -1,0 +1,33 @@
+{
+  "rows": 24000,
+  "leak_rows": 21622,
+  "settings": {
+    "network": "output_north",
+    "per_zone": 3000,
+    "no_leak_share": 0.1,
+    "hours": [
+      3,
+      8
+    ],
+    "sensor_noise": 0.001,
+    "demand_noise": 0.05,
+    "min_size": 0.1,
+    "max_size": 1.0,
+    "seed": 42,
+    "workers": 4
+  },
+  "columns": {
+    "zone": "zone the scenario ran in",
+    "leak": "1 = leak, 0 = no leak (answer for detection)",
+    "leak_node": "junction where the leak is (answer for location)",
+    "leak_pipes": "pipes connected to that junction, separated by |",
+    "leak_x / leak_y": "leak position in metres (UTM 40S), for distance error",
+    "leak_coeff": "EPANET emitter coefficient used (leak size setting)",
+    "leak_flow_lps": "leak flow at the first recorded hour, L/s (answer for size)",
+    "water_lost_m3_day_est": "leak_flow_lps x 86.4, rough m3 per day",
+    "demand_scale": "random change in total water use for this scenario",
+    "inflow_change_lps_hXX": "zone inlet meter change vs normal day at hour XX",
+    "dp_mm_hXX_<sensor>": "pressure drop at that sensor vs normal day, mm (positive = pressure fell), includes sensor noise"
+  },
+  "note": "Simulated with EPANET via WNTR on an illustrative network. Leaks are modelled as emitters at junctions. Not real CWA data."
+}
