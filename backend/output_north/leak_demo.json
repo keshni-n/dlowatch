@@ -1,0 +1,31 @@
+{
+  "leak_pipe": "P_7470",
+  "leak_zone": "Z3",
+  "emitter_coefficient": 0.0003,
+  "inflow_change_lps_at_3am_by_zone": {
+    "Z1": 0.0,
+    "Z2": 0.0,
+    "Z3": 1.504,
+    "Z4": -0.0,
+    "Z5": -0.0,
+    "Z6": 0.0,
+    "Z7": 0.0,
+    "Z8": 0.0
+  },
+  "water_lost_m3_per_day": 127.1,
+  "pressure_drop_mm_at_3am_in_leak_zone": {
+    "J_6837": 36.72,
+    "J_831": 32.64,
+    "J_7929": 31.6,
+    "J_6900": 30.14,
+    "J_1576": 28.9,
+    "J_6148": 28.71,
+    "J_6108": 27.31,
+    "J_11230": 20.26
+  },
+  "closest_sensors_by_drop": [
+    "J_6837",
+    "J_831",
+    "J_7929"
+  ]
+}
