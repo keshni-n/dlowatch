@@ -302,7 +302,7 @@ Settings in `backend/config/public.json`.
 
 - Phone numbers and email addresses typed in the note are replaced with `[removed]` before saving. The person is told why.
 - One phone (a random id it keeps, no personal data) can send 5 reports an hour and 15 a day. After that it is asked to call the hotline.
-- The same photo cannot be sent again within 24 hours.
+- The same photo cannot be sent again within 24 hours. This uses a photo fingerprint, so re-saved, resized or forwarded copies are refused too, while a new photo of the same leak (even from another phone) is accepted. People can take a photo or choose one from the gallery.
 - Public reports alone can never go above Watch, and reports from one phone count as one person.
 
 ## "If not fixed"
