@@ -1,7 +1,8 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Api, errorText } from '../core/api';
+import { Api } from '../core/api';
 import { I18n } from '../core/i18n';
 import { PublicNearby } from '../core/models';
 import { MyReports } from '../core/my-reports';
@@ -86,6 +87,10 @@ function networkCentre(fc: GeoJSON.FeatureCollection | null | undefined): [numbe
             <b>{{ i.t('photo') }}</b><span class="tiny muted">{{ i.t('photoOpt') }}</span>
           }
         </label>
+        <input #gal type="file" accept="image/*" class="hidden-input" (change)="pickPhoto($event)" aria-hidden="true" tabindex="-1">
+        @if (!photo()) {
+          <button type="button" class="btn ghost" (click)="gal.click()">{{ i.t('gallery') }}</button>
+        }
         @if (photo()) {
           @if (checking()) {
             <div class="tiny muted">{{ i.t('photoChecking') }}</div>
@@ -150,6 +155,7 @@ function networkCentre(fc: GeoJSON.FeatureCollection | null | undefined): [numbe
     </form>
   `,
   styles: [`
+    .hidden-input { display: none; }
     .page { gap: 14px; max-width: 640px; margin: 0 auto; }
     h1 { font-size: 28px; line-height: 1.15; }
     .sub { margin: 6px 0 0; }
@@ -250,7 +256,7 @@ export class PublicReport {
       this.check.set(null);
       this.checking.set(true);
       try { this.check.set(await checkPhoto(url, this.kind())); } catch { this.check.set(null); }
-    } catch { this.error.set('Could not read that photo.'); }
+    } catch { this.error.set(this.i.t('photoUnreadable')); }
     this.checking.set(false);
   }
 
@@ -285,7 +291,9 @@ export class PublicReport {
       writeDraft(null);
       this.router.navigate(['/report', r.code], { queryParams: r.note_cleaned ? { sent: 1, cleaned: 1 } : { sent: 1 } });
     } catch (e) {
-      this.error.set(errorText(e));
+      // the server's own messages are English and written for staff: show the person a plain one in their language
+      const status = e instanceof HttpErrorResponse ? e.status : -1;
+      this.error.set(this.i.t(status === 409 ? 'samePhoto' : status === 429 ? 'tooMany' : status === 0 ? 'noConnection' : 'sendFailed'));
     }
     this.busy.set(false);
   }

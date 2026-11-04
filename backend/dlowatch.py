@@ -15,6 +15,7 @@ Run with:  uvicorn server:app --reload
 
 import base64
 import hashlib
+import io
 import hmac
 import json
 from pathlib import Path
@@ -1481,7 +1482,7 @@ def link_report(r):
 
 
 PUBLIC_DEFAULT = {"max_reports_per_phone_per_hour": 5, "max_reports_per_phone_per_day": 15, "same_photo_block_hours": 24,
-                  "zone_snap_m": 400}
+                  "same_photo_max_diff": 4, "zone_snap_m": 400}
 PUBLIC = load_settings("public.json", PUBLIC_DEFAULT)
 EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+(\.[\w-]+)+")
 PHONE_RE = re.compile(r"(\+?\d[\d\s-]{6,}\d)")
@@ -1500,6 +1501,27 @@ def photo_hash(photo):
     return hashlib.sha256(photo.encode()).hexdigest()[:16] if photo else None
 
 
+def photo_print(photo):
+    """
+    'Looks the same' fingerprint (difference hash, 64 bits): shrink to 9 x 8 grey and compare each pixel
+    with its right-hand neighbour. Re-saved, resized or slightly brightened copies of a photo give the same
+    print; a new photo of the same leak, even from almost the same spot, differs in 10 or more bits.
+    """
+    if not photo:
+        return None
+    try:
+        from PIL import Image
+        raw = base64.b64decode(photo.split(",", 1)[-1])
+        a = np.asarray(Image.open(io.BytesIO(raw)).convert("L").resize((9, 8), Image.LANCZOS), dtype=float)
+        return int("".join("1" if b else "0" for b in (a[:, 1:] > a[:, :-1]).ravel()), 2)
+    except Exception:
+        return None     # an unreadable photo is still accepted, the exact check above still applies
+
+
+def same_photo(a, b, max_diff):
+    return a is not None and b is not None and bin(a ^ b).count("1") <= max_diff
+
+
 @router.post("/public/reports")
 def public_report(body: ReportIn):
     now = int(time.time())
@@ -1511,12 +1533,17 @@ def public_report(body: ReportIn):
     if len([r for r in mine if now - r["created"] < 86400]) >= PUBLIC["max_reports_per_phone_per_day"]:
         raise HTTPException(429, "Daily limit of reports from this phone reached. If it is urgent, call the hotline.")
     h = photo_hash(body.photo)
-    if h and any(r.get("photo_hash") == h and now - r["created"] < PUBLIC["same_photo_block_hours"] * 3600
-                 for r in REPORTS.values()):
+    fp = photo_print(body.photo)
+    recent = [r for r in REPORTS.values() if now - r["created"] < PUBLIC["same_photo_block_hours"] * 3600]
+    for r in recent:
+        if r.get("photo") and "photo_print" not in r:
+            r["photo_print"] = photo_print(r["photo"])     # reports saved before prints existed
+    if h and any(r.get("photo_hash") == h or same_photo(fp, r.get("photo_print"), PUBLIC["same_photo_max_diff"])
+                 for r in recent):
         raise HTTPException(409, "This photo was already sent with another report. Please take a new photo, or send without one.")
     note, cleaned = clean_note(body.note)
     r = add_report(body.model_copy(update={"note": note}))
-    r["photo_hash"] = h
+    r["photo_hash"], r["photo_print"] = h, fp
     return {"code": r["code"], "status": public_status(r), "note_cleaned": cleaned}
 
 
@@ -1789,7 +1816,18 @@ def alert_detail(aid: str):
         "if_not_fixed": if_not_fixed((a.get("search") or {}).get("m3_day")) if a["status"] == "open" else None,
         "suspects": (sp := suspects(a)), "households_est": households_near(zone, sp[:3]), "ease": repair_ease(sp),
         "inlet": api.ZONES[zone]["inlet"],
+        "crew_result": crew_result_view(JOBS.get(a.get("job"))),
     }
+
+
+def crew_result_view(j):
+    """What the crew logged when it closed the job, for the alert page. Photos are fetched separately."""
+    if not j or j.get("status") != "done":
+        return None
+    return {"job": j["id"], "crew": crew_name(j["crew_id"]), "outcome": j.get("outcome"),
+            "outcome_text": OUTCOMES.get(j.get("outcome")), "cause": j.get("cause"), "notes": j.get("notes"),
+            "finished": j.get("finished"), "found_at": j.get("found_at"), "fixed_at": j.get("fixed_at"),
+            "has_photo_before": bool(j.get("photo_before")), "has_photo_after": bool(j.get("photo_after"))}
 
 
 def usual(c, days):
@@ -2130,6 +2168,7 @@ def job_view(j):
         "pipes": top["pipes"] if top else [],
         "reports": job_reports(a),
         "loggers": job_loggers(a),
+        "has_photo_before": bool(j.get("photo_before")), "has_photo_after": bool(j.get("photo_after")),
     }
 
 
@@ -2227,7 +2266,8 @@ def crew_result(jid: str, body: ResultIn, user=Depends(CREW_ONLY)):
         now = int(time.time())
         j.update(status="done", finished=now, outcome=body.outcome, cause=body.cause, notes=body.notes,
                  found_at=body.found_at, fixed_at=body.fixed_at,
-                 photos=sum(1 for p in (body.photo_before, body.photo_after) if p))
+                 photos=sum(1 for p in (body.photo_before, body.photo_after) if p),
+                 photo_before=body.photo_before, photo_after=body.photo_after)
         a = ALERTS[j["alert"]]
         a["status"] = "resolved"
         a["resolved"] = now
@@ -2245,6 +2285,15 @@ def crew_result(jid: str, body: ResultIn, user=Depends(CREW_ONLY)):
                        "cause": body.cause, "by": crew_name(j["crew_id"]), "at": now,
                        "pipe": fixed["pipe_id"] if fixed else None})
         return job_view(j)
+
+
+@router.get("/jobs/{jid}/photos", dependencies=[Depends(STAFF_ONLY)])
+def job_photos(jid: str):
+    """The crew's before and after photos for a job. Separate from the job list because photos are big."""
+    j = JOBS.get(jid)
+    if not j:
+        raise HTTPException(404, "Unknown job")
+    return {"before": j.get("photo_before"), "after": j.get("photo_after")}
 
 
 # ============================================================== map data

@@ -16,7 +16,7 @@ export interface PhotoCheck {
   confidence: number | null;   // 0 to 1
   model: string | null;        // which model gave the label (null = simple checks only)
   brightness: number;          // 0 to 255
-  sharpness: number;           // variance of the Laplacian on a 256 px wide copy
+  sharpness: number;           // 0 to 100, from the blur effect (100 = sharp)
   kept_anyway?: boolean;       // the person was warned and sent it anyway
 }
 
@@ -29,9 +29,11 @@ export interface PhotoModel {
 export const PHOTO_MODEL: { current: PhotoModel | null } = { current: null };
 
 // Limits, set on purpose on the lenient side: a dark, slightly blurry photo of a real burst at night must pass.
-const DARK_BELOW = 30;          // mean brightness
+const DARK_BELOW = 30;          // mean brightness: nearly black
+const DIM_P95_BELOW = 70;       // even the brightest 5% of the photo is dim: too dark to see anything
 const BLANK_SPREAD_BELOW = 8;   // brightness spread (standard deviation)
-const BLURRY_BELOW = 12;        // Laplacian variance
+const BLURRY_ABOVE = 0.55;      // blur effect (Crete et al. 2007), 0 = sharp, 1 = very blurry
+const WIDTH = 512;              // the photo is checked at this width
 const MODEL_MIN_CONFIDENCE = 0.6;
 
 /** Kinds where a photo of water or a pipe is expected. For "no water at home" any photo is fine. */
@@ -39,7 +41,7 @@ export const PHOTO_KINDS = ['water_on_road', 'broken_pipe'];
 
 export async function checkPhoto(dataUrl: string, kind?: string): Promise<PhotoCheck> {
   const img = await load(dataUrl);
-  const w = 256;
+  const w = WIDTH;
   const h = Math.max(1, Math.round((img.height * w) / img.width));
   const c = document.createElement('canvas');
   c.width = w;
@@ -60,23 +62,21 @@ export async function checkPhoto(dataUrl: string, kind?: string): Promise<PhotoC
   for (const v of g) sq += (v - mean) ** 2;
   const spread = Math.sqrt(sq / g.length);
 
-  // sharpness: variance of the Laplacian (edges). Blurry photos have few strong edges.
-  let n = 0, ls = 0, ls2 = 0;
-  for (let y = 1; y < h - 1; y++) {
-    for (let x = 1; x < w - 1; x++) {
-      const i = y * w + x;
-      const lap = g[i - 1] + g[i + 1] + g[i - w] + g[i + w] - 4 * g[i];
-      ls += lap;
-      ls2 += lap * lap;
-      n++;
-    }
-  }
-  const sharp = n ? ls2 / n - (ls / n) ** 2 : 0;
+  // brightness of the brightest 5%: a photo where nothing is bright shows nothing
+  const hist = new Uint32Array(256);
+  for (const v of g) hist[Math.min(255, v | 0)]++;
+  let acc = 0, p95 = 255;
+  for (let b = 0; b < 256; b++) { acc += hist[b]; if (acc >= 0.95 * g.length) { p95 = b; break; } }
+
+  // blur: how much detail a deliberate extra blur removes. A sharp photo loses a lot, a blurry one
+  // has little left to lose. Same as skimage.measure.blur_effect (Crete et al. 2007).
+  const blur = blurEffect(g, w, h, 11);
+  const sharp = Math.round((1 - blur) * 100);
 
   const issues: PhotoIssue[] = [];
-  if (mean < DARK_BELOW) issues.push('dark');
+  if (mean < DARK_BELOW || p95 < DIM_P95_BELOW) issues.push('dark');
   else if (spread < BLANK_SPREAD_BELOW) issues.push('blank');
-  else if (sharp < BLURRY_BELOW) issues.push('blurry');
+  else if (blur > BLURRY_ABOVE) issues.push('blurry');
 
   let label: string | null = null, confidence: number | null = null, model: string | null = null;
   const m = PHOTO_MODEL.current;
@@ -93,7 +93,56 @@ export async function checkPhoto(dataUrl: string, kind?: string): Promise<PhotoC
       }
     } catch { /* a broken model must never stop a report */ }
   }
-  return { ok: !issues.length, issues, label, confidence, model, brightness: Math.round(mean), sharpness: Math.round(sharp) };
+  return { ok: !issues.length, issues, label, confidence, model, brightness: Math.round(mean), sharpness: sharp };
+}
+
+/** Blur effect, 0 (sharp) to 1 (blurry): the larger of the horizontal and vertical values. */
+export function blurEffect(g: Float32Array, w: number, h: number, size = 11): number {
+  let worst = 0;
+  for (const axis of [0, 1]) {
+    const f = boxBlur(g, w, h, size, axis);
+    let m1 = 0, m2 = 0;
+    for (let y = 2; y < h - 1; y++) {
+      for (let x = 2; x < w - 1; x++) {
+        const a = Math.abs(sobel(g, w, h, x, y, axis)), b = Math.abs(sobel(f, w, h, x, y, axis));
+        m1 += a;
+        m2 += Math.max(0, a - b);
+      }
+    }
+    if (m1 > 0) worst = Math.max(worst, Math.abs(m1 - m2) / m1);
+  }
+  return worst;
+}
+
+/** Sobel along one axis (0 = down the rows, 1 = across the columns), mirror at the edges like scipy. */
+function sobel(g: Float32Array, w: number, h: number, x: number, y: number, axis: number): number {
+  const at = (xx: number, yy: number) => g[mirror(yy, h) * w + mirror(xx, w)];
+  if (axis === 0) {
+    return (at(x - 1, y + 1) + 2 * at(x, y + 1) + at(x + 1, y + 1)) - (at(x - 1, y - 1) + 2 * at(x, y - 1) + at(x + 1, y - 1));
+  }
+  return (at(x + 1, y - 1) + 2 * at(x + 1, y) + at(x + 1, y + 1)) - (at(x - 1, y - 1) + 2 * at(x - 1, y) + at(x - 1, y + 1));
+}
+
+/** Moving average of `size` pixels along one axis, mirror at the edges like scipy's uniform_filter1d. */
+function boxBlur(g: Float32Array, w: number, h: number, size: number, axis: number): Float32Array {
+  const out = new Float32Array(g.length);
+  const half = size >> 1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let s = 0;
+      for (let k = -half; k < size - half; k++) {
+        s += axis === 0 ? g[mirror(y + k, h) * w + x] : g[y * w + mirror(x + k, w)];
+      }
+      out[y * w + x] = s / size;
+    }
+  }
+  return out;
+}
+
+function mirror(i: number, n: number): number {
+  if (i < 0) return -i - 1;
+  if (i >= n) return 2 * n - i - 1;
+  return i;
 }
 
 function load(src: string): Promise<HTMLImageElement> {

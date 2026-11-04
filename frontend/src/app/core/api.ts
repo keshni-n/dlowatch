@@ -36,6 +36,7 @@ export class Api {
   reportToAlert(code: string) { return this.post<{ alert: string }>(`/reports/${code}/alert`); }
   forwardReport(code: string) { return this.post<PublicReportRow>(`/reports/${code}/forward`); }
   reportPhoto(code: string) { return this.get<{ photo: string }>(`/reports/${code}/photo`); }
+  jobPhotos(id: string) { return this.get<{ before: string | null; after: string | null }>(`/jobs/${id}/photos`); }
   crews() { return this.get<{ crews: Crew[]; jobs: Job[]; labels: Label[] }>('/crews'); }
   mapZones() { return this.get<GeoJSON.FeatureCollection>('/map/zones'); }
   mapPipes(zone: string) { return this.get<GeoJSON.FeatureCollection>(`/map/pipes?zone=${zone}`); }
