@@ -1,10 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { Api, errorText } from '../core/api';
 import { Auth } from '../core/auth';
 import { AgoPipe, DateTimePipe, LevelPipe, NumPipe, fmtDay } from '../core/format';
-import { AlertDetail, Crew } from '../core/models';
+import { AlertDetail, Crew, CrewResult } from '../core/models';
 import { LeakMap, MapCircle, MapPoint } from '../shared/leak-map';
 import { ChartBand, ChartSeries, LineChart } from '../shared/line-chart';
 
@@ -47,6 +47,33 @@ const AREA_COLORS = ['#E8590C', '#B9351C', '#7F95A6'];
             <span><span class="mono">{{ n.month_m3 | num }} m³</span> in a month</span>
             <span><span class="mono">{{ n.year_m3 | num }} m³</span> in a year, about {{ n.olympic_pools_per_year }} Olympic pools</span>
             @if (n.money; as m) { <span><span class="mono">{{ m.currency }} {{ m.month | num }}</span> a month</span> }
+          </section>
+        }
+        @if (a.crew_result; as cr) {
+          <section class="card stack" aria-label="Crew result">
+            <div class="row between">
+              <h2>Crew result</h2>
+              <span class="small muted">{{ cr.crew }} · job <span class="mono">{{ cr.job }}</span> · closed {{ cr.finished | dateTime }}</span>
+            </div>
+            <div><b>{{ cr.outcome_text }}</b>{{ cr.cause ? ', ' + cr.cause : '' }}
+              @if (cr.found_at || cr.fixed_at) { <span class="small muted"> · {{ cr.found_at ? 'found ' + cr.found_at : '' }}{{ cr.found_at && cr.fixed_at ? ', ' : '' }}{{ cr.fixed_at ? 'fixed ' + cr.fixed_at : '' }}</span> }
+            </div>
+            @if (cr.notes) { <div class="small">"{{ cr.notes }}"</div> }
+            @if (cr.has_photo_before || cr.has_photo_after) {
+              <div class="crew-photos">
+                @for (w of photoSlots(cr); track w.key) {
+                  <figure>
+                    @if (crewPhotos()[w.key]; as src) {
+                      <img [src]="src" [alt]="w.label + ' photo from the crew'" [class.big]="bigPhoto() === w.key" (click)="bigPhoto.set(bigPhoto() === w.key ? '' : w.key)">
+                    } @else { <div class="ph tiny muted">Loading the photo...</div> }
+                    <figcaption class="tiny muted">{{ w.label }}</figcaption>
+                  </figure>
+                }
+              </div>
+              <div class="tiny muted">Tap a photo to see it bigger.</div>
+            } @else {
+              <div class="tiny muted">The crew did not add photos.</div>
+            }
           </section>
         }
         @if (a.model_status !== 'ok' && a.kind !== 'public') {
@@ -123,7 +150,7 @@ const AREA_COLORS = ['#E8590C', '#B9351C', '#7F95A6'];
                 <thead><tr><th>#</th><th>Block</th><th>Likely</th><th>Pipes</th><th>Pipe length</th><th>From best guess</th></tr></thead>
                 <tbody>
                   @for (s of a.suspects; track s.rank) {
-                    <tr class="clickable" [class.sel]="s.rank === pick()" (click)="pick.set(s.rank)">
+                    <tr class="clickable" [class.sel]="s.rank === pick()" (click)="pickBlock(s.rank)">
                       <td class="mono"><b>{{ s.rank }}</b></td>
                       <td>{{ s.street }}<div class="tiny muted mono">{{ s.pipes.slice(0, 4).join(', ') }}{{ s.pipe_count > 4 ? ' +' + (s.pipe_count - 4) : '' }}</div></td>
                       <td><div class="row nowrap"><span class="pbar"><span [style.width.%]="s.probability * 100"></span></span><b class="mono">{{ s.probability * 100 | num }}%</b></div></td>
@@ -133,12 +160,12 @@ const AREA_COLORS = ['#E8590C', '#B9351C', '#7F95A6'];
                 </tbody>
               </table>
             </div>
-            <p class="tiny muted">Click a row to show it on the map.</p>
+            <p class="tiny muted">Click a row to show it on the map below.</p>
           </section>
         }
 
         <section class="row two">
-          <div class="card map-card">
+          <div class="card map-card" #mapCard>
             <div class="row between"><h2>Where to look</h2>
               <span class="small muted">Orange pipes: {{ a.suspects.length ? 'block ' + pick() + ' in the list' : 'search area 1' }}. Circles: search areas. Blue dots: pressure sensors (darker = bigger drop). Purple: noise loggers (dark = leak noise).</span></div>
             <dw-leak-map [pipes]="pipes()" [highlightPipes]="highlight()" [circles]="circles()" [points]="points()" [height]="460" fitTo="circles" [fitCircle]="a.areas[0]?.from_loggers ? 0 : null" />
@@ -261,6 +288,11 @@ const AREA_COLORS = ['#E8590C', '#B9351C', '#7F95A6'];
     tr.dim td { color: var(--muted); }
     .support { white-space: nowrap; }
     .warn { font-size: 13px; background: var(--watch-pill); color: var(--text); border-radius: 8px; padding: 10px 12px; }
+    .crew-photos { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .crew-photos figure { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+    .crew-photos img { width: 100%; max-height: 260px; object-fit: cover; border-radius: 10px; cursor: zoom-in; }
+    .crew-photos img.big { max-height: none; object-fit: contain; cursor: zoom-out; }
+    .crew-photos .ph { height: 160px; border-radius: 10px; background: var(--chip); display: flex; align-items: center; justify-content: center; }
     .demo { font-size: 13px; background: var(--ai-pill); color: var(--ai-text); border-radius: 8px; padding: 12px 14px; }
   `],
 })
@@ -279,6 +311,16 @@ export class AlertDetailPage {
   crewTick = signal(0);
   picked = computed(() => { this.crewTick(); return this.crews().find(c => c.id === this.crew) ?? null; });
   pick = signal(1);
+  private mapCard = viewChild<ElementRef<HTMLElement>>('mapCard');
+
+  /** Show the block on the map. The map sits under the list, so bring it into view if it is off screen. */
+  pickBlock(rank: number) {
+    this.pick.set(rank);
+    const el = this.mapCard()?.nativeElement;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (r.top < 0 || r.bottom > window.innerHeight) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
   highlight = computed(() => {
     const a = this.a();
     if (!a) return [];
@@ -349,10 +391,25 @@ export class AlertDetailPage {
       const a = await this.api.alert(id);
       this.a.set(a);
       this.error.set('');
+      this.loadCrewPhotos(a.crew_result);
       await this.loadCrews();
       if (a.kind !== 'public') this.pipes.set(await this.api.mapPipes(a.zone));
       else this.pipes.set(null);
     } catch (e) { this.error.set(errorText(e)); }
+  }
+
+  crewPhotos = signal<Record<string, string>>({});
+  bigPhoto = signal('');
+  photoSlots(cr: CrewResult) {
+    return [{ key: 'before', label: 'Before', on: cr.has_photo_before }, { key: 'after', label: 'After', on: cr.has_photo_after }].filter(x => x.on);
+  }
+
+  async loadCrewPhotos(cr: CrewResult | null) {
+    if (!cr || !(cr.has_photo_before || cr.has_photo_after)) { this.crewPhotos.set({}); return; }
+    try {
+      const p = await this.api.jobPhotos(cr.job);
+      this.crewPhotos.set({ ...(p.before ? { before: p.before } : {}), ...(p.after ? { after: p.after } : {}) });
+    } catch { /* the rest of the page still works */ }
   }
 
   async loadCrews() {

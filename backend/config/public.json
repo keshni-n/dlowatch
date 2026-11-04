@@ -3,6 +3,8 @@
   "max_reports_per_phone_per_hour": 5,
   "max_reports_per_phone_per_day": 15,
   "same_photo_block_hours": 24,
+  "same_photo_max_diff": 4,
+  "_photo_note": "A photo counts as already sent when its fingerprint differs by this many of 64 points or fewer. Copies, re-saved or resized photos differ by 0 to 1; a new photo of the same leak by 10 or more.",
   "zone_snap_m": 400,
   "_snap_note": "A spot just outside every zone outline still belongs to the nearest zone if one of its pipes is within this many metres."
 }

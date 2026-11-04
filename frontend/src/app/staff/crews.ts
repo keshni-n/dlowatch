@@ -43,7 +43,8 @@ const LABEL: Record<string, string> = { leak_found: 'Real leak', no_leak: 'No le
                   <td class="small">{{ j.why }}</td>
                   <td>{{ j.crew }}</td>
                   <td><span class="pill" [class]="cls(j.status)">{{ j.status | jobStatus }}</span></td>
-                  <td class="small">@if (j.outcome_text) {<b>{{ j.outcome_text }}</b>{{ j.cause ? ', ' + j.cause : '' }}<div class="tiny muted">{{ j.finished | dateTime }}</div>}</td>
+                  <td class="small">@if (j.outcome_text) {<b>{{ j.outcome_text }}</b>{{ j.cause ? ', ' + j.cause : '' }}<div class="tiny muted">{{ j.finished | dateTime }}</div>
+                    @if (j.has_photo_before || j.has_photo_after) { <a class="tiny" [routerLink]="['/dashboard/alerts', j.alert]">{{ (j.has_photo_before ? 1 : 0) + (j.has_photo_after ? 1 : 0) }} photo{{ j.has_photo_before && j.has_photo_after ? 's' : '' }} from the crew</a> }}</td>
                 </tr>
               } @empty { <tr><td colspan="6" class="muted">No jobs yet. Send one from a leak alert.</td></tr> }
             </tbody>

@@ -6,6 +6,7 @@ networkx
 pyproj
 matplotlib
 joblib
+pillow
 # the trained models were saved with this version, keep it pinned
 scikit-learn==1.6.1
 fastapi
