@@ -1894,7 +1894,6 @@ def crew_result(jid: str, body: ResultIn, user=Depends(CREW_ONLY)):
         return job_view(j)
 
 
-
 # ============================================================== map data
 @router.get("/map/zones", dependencies=[Depends(STAFF_ONLY)])
 def map_zones():
@@ -1952,4 +1951,475 @@ def demo_leak(body: DemoLeakIn):
     return {"alert": aid, "model_status": ALERTS[aid]["model_status"], "detail": public_alert_view(ALERTS[aid])}
 
 
+# ---------------------------------------------------------------- system status (rules + model)
+@router.get("/system/status", dependencies=[Depends(STAFF_ONLY)])
+def system_status():
+    err = MODEL["last_error"]
+    return {"model": {"status": model_status(), "enabled": MODEL["enabled"], "timeout_s": MODEL["timeout_s"],
+                      "zones_with_model": sorted(api.MODELS), "last_error": err[1] if err else None},
+            "ruleset": {"active": RULESET,
+                        "available": [{"version": v, "description": r.get("description"), "published": r.get("published")}
+                                      for v, r in sorted(scoring.RULESETS.items(), key=lambda kv: scoring._version_key(kv[0]))]}}
 
+
+@router.get("/repairs/priority", dependencies=[Depends(STAFF_ONLY)])
+def repairs_priority():
+    rows = repair_items()
+    return {"items": rows, "weights": PRIORITY["weights"],
+            "household_use_litres_per_day": PRIORITY["household_use_litres_per_day"],
+            "totals": {"leaks": len(rows), "m3_per_day": round(sum(r["water_lost_m3_per_day"] or 0 for r in rows)),
+                       "households": sum(r["households_est"] or 0 for r in rows)}}
+
+
+REPORT_DEFAULT = {"water_cost_rs_per_m3": None, "currency": "Rs", "default_days": 7}
+
+
+def report_settings():
+    return load_settings("report.json", REPORT_DEFAULT)
+
+
+@router.get("/report", dependencies=[Depends(STAFF_ONLY)])
+def water_report(days: Optional[int] = None):
+    """Water lost, water saved, money and worst zones over the last few days (default 7)."""
+    cfg = report_settings()
+    days = max(1, min(days or cfg["default_days"] or 7, HISTORY_DAYS - 1))
+    start = NOW - days * 86400
+    c = refresh()
+    zones, daily = [], {}
+    for z in api.ZONES:
+        fc = c["flow"][api.ZONES[z]["inlet"]]
+        t, v = fc["t"], fc["v"]
+        sel = (t >= start) & (t < NOW)
+        hours = ((t[sel] + 4 * 3600) // 3600) % 24
+        expected = ZONE_PROPS[z]["avg_demand_lps"] * PATTERN[hours]
+        ok = ~np.isnan(v[sel])
+        water_in = float(np.sum(v[sel][ok])) * STEP_S / 1000
+        exp_m3 = float(np.sum(expected[ok])) * STEP_S / 1000
+        coverage = float(ok.mean()) if len(ok) else 0.0
+        day = ((t[sel] + 4 * 3600) // 86400)[ok]
+        extra = (v[sel][ok] - expected[ok]) * STEP_S / 1000
+        for d_, x in zip(day, extra):
+            daily[int(d_)] = daily.get(int(d_), 0.0) + float(x)
+        alerts_z = [a for a in ALERTS.values() if a["zone"] == z and a["created"] >= start]
+        zones.append({"zone": z, "name": ZONE_NAMES[z], "water_in_m3": round(water_in), "expected_m3": round(exp_m3),
+                      "lost_m3": round(max(0.0, water_in - exp_m3)), "lost_pct": round((water_in - exp_m3) / exp_m3 * 100, 1) if exp_m3 else 0,
+                      "data_coverage_pct": round(coverage * 100, 1), "alerts": len(alerts_z),
+                      "open_leaks": len([a for a in ALERTS.values() if a["zone"] == z and a["status"] == "open" and a["kind"] != "public"])})
+    zones.sort(key=lambda r: -r["lost_m3"])
+    fixed = []
+    for a in ALERTS.values():
+        j = JOBS.get(a.get("job")) if a.get("job") else None
+        if a["status"] == "resolved" and j and j.get("outcome") == "leak_found" and (a.get("resolved") or 0) >= start - 30 * 86400:
+            per_day = (a.get("search") or {}).get("m3_day") or 0
+            since = max(a["resolved"], start)
+            fixed.append({"alert": a["id"], "zone": a["zone"], "zone_name": ZONE_NAMES[a["zone"]], "fixed": a["resolved"],
+                          "m3_per_day": per_day, "saved_m3_in_period": round(per_day * max(0, NOW - since) / 86400),
+                          "cause": j.get("cause"), "crew": CREWS[j["crew_id"]]["name"]})
+    open_rows = repair_items()
+    total_in = sum(z["water_in_m3"] for z in zones)
+    total_exp = sum(z["expected_m3"] for z in zones)
+    lost = sum(z["lost_m3"] for z in zones)
+    saved = sum(f["saved_m3_in_period"] for f in fixed)
+    still = round(sum(r["water_lost_m3_per_day"] or 0 for r in open_rows))
+    cost = cfg.get("water_cost_rs_per_m3")
+    money = None
+    if isinstance(cost, (int, float)) and cost > 0:
+        money = {"cost_per_m3": cost, "currency": cfg.get("currency", "Rs"), "lost": round(lost * cost),
+                 "saved": round(saved * cost), "still_losing_per_day": round(still * cost)}
+    return {
+        "days": days, "start": start, "end": NOW,
+        "totals": {"water_in_m3": total_in, "expected_m3": total_exp, "lost_m3": lost,
+                   "lost_pct": round((total_in - total_exp) / total_exp * 100, 1) if total_exp else 0,
+                   "saved_m3": saved, "saved_per_day_m3": round(sum(f["m3_per_day"] for f in fixed)),
+                   "still_losing_m3_per_day": still, "open_leaks": len([r for r in open_rows if r["kind"] != "public"]),
+                   "alerts_raised": len([a for a in ALERTS.values() if a["created"] >= start]),
+                   "reports": len([r for r in REPORTS.values() if r["created"] >= start]),
+                   "repairs_done": len(fixed)},
+        "money": money, "money_note": None if money else "The cost of water per m³ has not been set yet.",
+        "zones": zones, "fixed": fixed,
+        "daily": [{"day": d_ * 86400 - 4 * 3600, "lost_m3": round(max(0.0, x))} for d_, x in sorted(daily.items())],
+        "note": "Expected use comes from each zone's normal demand pattern. Lost = water put in minus expected use.",
+    }
+
+
+EVAL_FILE = Path(__file__).with_name("evaluation") / "results.json"
+
+
+def battledim_results():
+    """Test on the public BattLeDIM L-Town benchmark (battledim/evaluate_ltown.py), if it has been run."""
+    folder = EVAL_FILE.parent
+    runs = {}
+    for f in sorted(folder.glob("battledim_2019_wl-*.json")):
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+            runs[d["summary"]["ruleset"]] = d
+        except Exception:
+            continue
+    if not runs:
+        return None
+    newest = max(runs, key=scoring._version_key)
+    locator = None
+    try:
+        lo = json.loads((folder / "battledim_locator.json").read_text(encoding="utf-8"))
+        locator = {k: lo[k] for k in ("trained_on", "training_leaks", "areas", "avg_area_radius_m", "simulated_holdout",
+                                      "validation_2018", "test_2019")}
+    except Exception:
+        pass
+    return {"locator": locator, "network": "BattLeDIM L-Town (782 junctions, 905 pipes, 33 pressure sensors)",
+            "tuned_on": "2018", "tested_on": "2019",
+            "rulesets": {v: r["summary"] for v, r in runs.items()},
+            "newest": newest, "leaks": runs[newest]["leaks"], "method": runs[newest].get("method")}
+
+
+@router.get("/evaluation", dependencies=[Depends(STAFF_ONLY)])
+def evaluation_results():
+    """Latest results of evaluate.py, if it has been run."""
+    try:
+        return {"available": True, **json.loads(EVAL_FILE.read_text(encoding="utf-8")), "battledim": battledim_results()}
+    except FileNotFoundError:
+        return {"available": False, "how": "Run: python evaluate.py (in the backend folder)"}
+    except Exception as e:
+        return {"available": False, "how": f"Results file could not be read: {e}"}
+
+
+@router.post("/system/reset")
+def reset_network(user=Depends(ADMIN_ONLY)):
+    """Admin only: start fresh before a demo. Deletes every alert, public report, crew job, crew result and
+    leak in the network. Accounts, settings and the meters stay. New leaks then start on their own again."""
+    global NOW
+    with LOCK:
+        ALERTS.clear(); REPORTS.clear(); JOBS.clear(); LABELS.clear(); LEAKS.clear()
+        NOW = int(time.time()) // STEP_S * STEP_S
+        LIVE_STATE["last_scan"] = None
+        VERSION["n"] += 1
+    flush()
+    log.warning("Network reset by %s", user["name"])
+    return {"alerts": 0, "reports": 0, "jobs": 0}
+
+
+class ModelSwitch(BaseModel):
+    enabled: bool
+
+
+@router.post("/system/model")
+def switch_model(body: ModelSwitch, user=Depends(ADMIN_ONLY)):
+    """For the demo: switch the anomaly model off to show that alerts still come from the rules."""
+    MODEL["enabled"] = body.enabled
+    log.warning("Anomaly model switched %s by %s", "on" if body.enabled else "off", user["name"])
+    return system_status()
+
+
+@router.get("/model/metrics", dependencies=[Depends(STAFF_ONLY)])
+def model_metrics():
+    path = api.NET / "models" / "metrics.json"
+    return json.loads(path.read_text()) if path.exists() else []
+
+
+# ============================================================== helpers
+def pick_pipe(zone, rng, min_d=0):
+    options = [p for p, z in api.PIPE_ZONE.items()
+               if z == zone and not p.startswith("P_IN") and PIPE.get(p, {}).get("status", "open") == "open"
+               and (PIPE.get(p, {}).get("diameter_mm") or 0) >= min_d and (PIPE.get(p, {}).get("length_m") or 0) > 30]
+    return rng.choice(sorted(options))
+
+
+# ============================================================== live network, detector and database
+# The meters read a simulated network (there are no live CWA meters to connect yet). Leaks start in that
+# network on their own, at random, like they do in a real one. Nothing tells the detector about them: it
+# only sees the meter readings, scores them with the rules and raises an alert when the score is high enough.
+LIVE_DEFAULT = {
+    "leaks_per_day": 4,             # new leaks in the whole network, on average
+    "size_mix": {"small": 0.35, "medium": 0.35, "large": 0.30},   # large ones are bursts
+    "max_active_leaks": 6,          # unfixed leaks the network can have at once
+    "scan_minutes": 5,              # how often the detector checks every zone
+    "realert_cooldown_hours": 6,    # after an alert is closed with no leak found, wait before alerting that zone again
+    "burst_flow_pct": 5,            # flow in the last 30 minutes this much above usual...
+    "burst_drop_mm": 60,            # ...and a pressure drop this big = burst
+    "needs_one_of": ["NF-01", "NF-03", "PR-01"],   # a direct leak sign; the 24 h water balance alone is not enough
+}
+LIVE = load_settings("network.json", LIVE_DEFAULT)
+DB = {"store": None, "last_flush": 0}
+LIVE_STATE = {"running": False, "last_scan": None, "scans": 0}
+
+
+def world_add_leak(pipe_id, size, started):
+    """Put a leak in the simulated network. EPANET works out what each meter will see."""
+    zone, readings, truth = simulate(pipe_id, size)
+    lid = uuid.uuid4().hex[:8]
+    with LOCK:
+        LEAKS[lid] = {"id": lid, "zone": zone, "pipe_id": pipe_id, "size": size,
+                      "kind": "burst" if size == "large" else "slow", "start": int(started), "end": None,
+                      "flow_lps": truth["leak_flow_lps"],
+                      "flow_lps_h8": round(truth["leak_flow_lps"] * max(1.0, readings.get("inflow_change_lps_h08", 0) /
+                                                                      max(readings.get("inflow_change_lps_h03", 0), 1e-6)), 3),
+                      "dp_mm": {k.split("_h03_")[1]: v for k, v in readings.items() if "_h03_" in k},
+                      "dp_mm_h8": {k.split("_h08_")[1]: v for k, v in readings.items() if "_h08_" in k},
+                      "latlon": truth["latlon"]}
+        VERSION["n"] += 1
+    return lid
+
+
+def world_spawn(t_from, t_to, rng):
+    """Random new leaks between two times (a Poisson process), up to the active limit."""
+    active = [lk for lk in LEAKS.values() if not lk["end"]]
+    expected = LIVE["leaks_per_day"] * (t_to - t_from) / 86400
+    n = int(np.random.default_rng(rng.randrange(10 ** 9)).poisson(expected))
+    sizes, weights = zip(*LIVE["size_mix"].items())
+    for _ in range(min(n, max(0, LIVE["max_active_leaks"] - len(active)))):
+        zone = rng.choice(list(api.ZONES))
+        size = rng.choices(sizes, weights)[0]
+        pipe = pick_pipe(zone, rng, 150 if size == "large" else 0)
+        world_add_leak(pipe, size, rng.randint(t_from, t_to - 60))
+
+
+def _window_mean(c, t0, t1):
+    sel = (c["t"] >= t0) & (c["t"] < t1)
+    vals = c["v"][sel]
+    return float(np.nanmedian(vals)) if sel.any() and not np.all(np.isnan(vals)) else float("nan")   # median: one bad reading cannot swing it
+
+
+def _vs_usual(c, t0, t1, days):
+    """Mean in a time window, and the usual value (median of the same window on previous days)."""
+    now = _window_mean(c, t0, t1)
+    prev = [_window_mean(c, t0 - k * 86400, t1 - k * 86400) for k in range(1, days + 1)]
+    prev = [x for x in prev if not math.isnan(x)]
+    return now, (float(np.median(prev)) if prev else float("nan"))
+
+
+def last_reading_time(h):
+    """The latest h:00 (Mauritius time) whose one-hour window (h-30 min to h+30 min) is complete."""
+    t = (NOW + 4 * 3600) // 86400 * 86400 - 4 * 3600 + h * 3600
+    return t - 86400 if t > NOW - 30 * 60 else t
+
+
+def readings_from_meters(zone):
+    """The same features the model was trained on, worked out from the cleaned meter readings:
+    pressure drop at each sensor and extra inflow at 3am and 8am, against the same time on previous days."""
+    c = refresh()
+    inlet = c["flow"][api.ZONES[zone]["inlet"]]
+    out = {}
+    for h in api.HOURS:
+        t = last_reading_time(h)
+        q, q0 = _vs_usual(inlet, t - 15 * 60, t + 15 * 60, 7)
+        out[f"inflow_change_lps_h{h:02d}"] = round(q - q0, 4) if not math.isnan(q - q0) else 0.0
+        for sid in api.ZONES[zone]["sensors"]:
+            p, p0 = _vs_usual(c["pressure"][sid], t - 30 * 60, t + 30 * 60, 6)
+            out[f"dp_mm_h{h:02d}_{sid}"] = round((p0 - p) * 1000, 2) if not math.isnan(p0 - p) else 0.0
+    return out
+
+
+def sensor_wobble_mm(sid, t, nights=7):
+    """How much this sensor's reading at time t normally moves from one night to the next (robust spread, mm)."""
+    c = refresh()["pressure"][sid]
+    vals = [_window_mean(c, t - k * 86400 - 30 * 60, t - k * 86400 + 30 * 60) for k in range(1, nights + 1)]
+    vals = np.array([x for x in vals if not math.isnan(x)])
+    if len(vals) < 4:
+        return None
+    return float(1.4826 * np.median(np.abs(vals - np.median(vals))) * 1000)
+
+
+def wobble_filter(dp, rs, t):
+    """Ruleset pressure_check: a drop only counts if it is bigger than k times the sensor's usual wobble.
+    Sensors with too little history keep their drop as it is."""
+    k = (rs.get("pressure_check") or {}).get("spread_k")
+    if not k:
+        return dp
+    out = {}
+    for sid, mm in dp.items():
+        w = sensor_wobble_mm(sid, t)
+        out[sid] = mm if w is None or mm > k * max(w, 1.0) else 0.0
+    return out
+
+
+def burst_check(zone):
+    """Last 30 minutes against the same 30 minutes on previous days: a flow jump and a pressure drop together."""
+    c = refresh()
+    t0, t1 = NOW - 30 * 60, NOW
+    q, q0 = _vs_usual(c["flow"][api.ZONES[zone]["inlet"]], t0, t1, 7)
+    dp = {}
+    for sid in api.ZONES[zone]["sensors"]:
+        p, p0 = _vs_usual(c["pressure"][sid], t0, t1, 6)
+        if not math.isnan(p0 - p) and meter_trust(sid) >= scoring.get(RULESET)["trust"]["min"]:
+            dp[sid] = round((p0 - p) * 1000, 1)
+    jump = (q - q0) if not math.isnan(q - q0) else 0.0
+    pct = jump / q0 * 100 if q0 else 0.0
+    qb, qb0 = _vs_usual(c["flow"][api.ZONES[zone]["inlet"]], NOW - 150 * 60, NOW - 120 * 60, 7)
+    before = (qb - qb0) / qb0 * 100 if qb0 and not math.isnan(qb - qb0) else 0.0
+    drops = sorted(dp.values(), reverse=True) + [0, 0]
+    # a burst drops pressure at more than one sensor; one sensor alone is more likely a meter problem
+    # sudden: the flow rose this much since two hours ago (a busy day raises both, so it cancels out)
+    is_burst = (pct - before >= LIVE["burst_flow_pct"]
+                and drops[0] >= LIVE["burst_drop_mm"] and drops[1] >= LIVE["burst_drop_mm"] / 3)
+    return is_burst, jump, pct, dp
+
+
+def _started_estimate(zone, kind):
+    if kind == "burst":
+        c = refresh()["flow"][api.ZONES[zone]["inlet"]]
+        for back in range(1, 13):                        # walk back 5 minutes at a time, up to an hour
+            q, q0 = _vs_usual(c, NOW - back * STEP_S, NOW - (back - 1) * STEP_S, 7)
+            if math.isnan(q) or q0 <= 0 or (q - q0) / q0 * 100 < LIVE["burst_flow_pct"] / 2:
+                return NOW - (back - 1) * STEP_S
+        return NOW - 3600
+    nights = zone_flow_stats(zone)["nights"]
+    run = zone_flow_stats(zone)["nights_running"]
+    return nights[-max(run, 1)]["night"] - 6 * 3600 if nights else NOW - 86400
+
+
+def detect_zone(zone):
+    """Look at one zone's meters and raise an alert if the rules say so. Returns the new alert id or None."""
+    is_burst, jump, pct, dp_now = burst_check(zone)
+    with LOCK:
+        open_kinds = {a["kind"] for a in ALERTS.values() if a["zone"] == zone and a["status"] == "open" and a["kind"] != "public"}
+        # one open alert per zone, except that a burst still gets its own alert next to an open slow leak
+        if open_kinds and not (is_burst and "burst" not in open_kinds):
+            return None
+        cool = LIVE["realert_cooldown_hours"] * 3600
+        closed = [a for a in ALERTS.values() if a["zone"] == zone and a["status"] == "resolved" and a["kind"] != "public"]
+        if any((a.get("resolved") or 0) > NOW - cool and (JOBS.get(a.get("job")) or {}).get("outcome") != "leak_found"
+               for a in closed):
+            return None
+        last_closed = max((a.get("resolved") or 0 for a in closed), default=0)
+    if not is_burst:
+        # night signals come from last night: if an alert in this zone was closed after that, wait for the next night
+        if last_closed >= last_reading_time(min(api.HOURS)) - 6 * 3600:
+            return None
+    if is_burst:
+        readings = {}
+        for h in api.HOURS:
+            readings[f"inflow_change_lps_h{h:02d}"] = round(jump, 4)
+            for sid in api.ZONES[zone]["sensors"]:
+                readings[f"dp_mm_h{h:02d}_{sid}"] = dp_now.get(sid, 0.0)
+        dp = dp_now
+    else:
+        readings = readings_from_meters(zone)
+        dp = {k.split("_h03_")[1]: v for k, v in readings.items() if "_h03_" in k}
+        # the model sees every drop; the rules only count drops bigger than the sensor's normal night-to-night wobble
+        dp = wobble_filter(dp, scoring.get(RULESET), last_reading_time(min(api.HOURS)))
+    pred, status = ask_model(zone, readings)
+    search = search_from_model(pred) if pred and pred.get("leak") else search_from_meters(zone, dp, readings)
+    if is_burst and jump > 0:
+        search.update(flow_lps=round(jump, 2), m3_day=round(jump * 86.4, 1))
+    kind = "burst" if is_burst else "slow"
+    top_pipes = search["areas"][0]["pipes"] if search.get("areas") else []
+    a = {"id": uuid.uuid4().hex[:8], "zone": zone, "kind": kind, "status": "open", "started": _started_estimate(zone, kind),
+         "created": NOW, "model": pred or {}, "model_status": status, "search": search, "dp_mm": dp,
+         "streets": streets_of(top_pipes), "reports": [], "job": None, "events": [], "ruleset": RULESET}
+    with LOCK:
+        ALERTS[a["id"]] = a
+        sc = score_alert(a)
+        codes = {r["code"] for r in sc["trace"] if r.get("points")}
+        if sc["score"] < scoring.get(RULESET)["bands"]["watch"] or not codes & set(LIVE["needs_one_of"]):
+            del ALERTS[a["id"]]
+            return None
+        # public reports already waiting nearby join this alert
+        for r in REPORTS.values():
+            if r["zone"] == zone and r["alert"] is None and r["created"] > NOW - 86400:
+                link_report(r)
+        log.info("Alert %s raised in %s (%s)", a["id"], zone, kind)
+        return a["id"]
+
+
+def scan_all():
+    out = [aid for z in api.ZONES if (aid := detect_zone(z))]
+    LIVE_STATE.update(last_scan=NOW, scans=LIVE_STATE["scans"] + 1)
+    return out
+
+
+def end_leak_near(a, at):
+    """A crew fixed the leak behind this alert: stop the nearest active leak in that zone."""
+    active = [lk for lk in LEAKS.values() if lk["zone"] == a["zone"] and not lk["end"]]
+    if not active:
+        return None
+    g = (a.get("search") or {}).get("best_guess") or a.get("latlon")
+    lk = min(active, key=lambda x: km(g[0], g[1], *x["latlon"]) if g else 0)
+    lk["end"] = int(at)
+    VERSION["n"] += 1
+    return lk
+
+
+def flush():
+    st = DB["store"]
+    if not st:
+        return
+    with LOCK:
+        st.flush("alerts", ALERTS)
+        st.flush("reports", REPORTS)
+        st.flush("jobs", JOBS)
+        st.flush("crew_results", {l["id"]: l for l in LABELS})
+        st.flush("network_leaks", LEAKS)
+        st.set_meta("report_counter", CODE_COUNTER["n"])
+        st.set_meta("last_tick", NOW)
+    DB["last_flush"] = int(time.time())
+
+
+def tick(rng):
+    """Move the clock to the latest 5 minutes, let the network spring leaks, scan, save."""
+    global NOW
+    new_now = int(time.time()) // STEP_S * STEP_S
+    if new_now <= NOW:
+        return False
+    world_spawn(NOW, new_now, rng)
+    with LOCK:
+        NOW = new_now
+        VERSION["n"] += 1
+    refresh()
+    if NOW - (LIVE_STATE["last_scan"] or 0) >= LIVE["scan_minutes"] * 60 - 1:
+        scan_all()
+    flush()
+    return True
+
+
+def _loop():
+    rng = random.Random()
+    while True:
+        try:
+            tick(rng)
+        except Exception:
+            log.exception("Live tick failed")
+        time.sleep(20)
+
+
+def start(db_path=None, run_loop=True):
+    """Open the database, load everything, seed accounts on the very first start, and run the network live."""
+    global NOW
+    st = store.Store(db_path)
+    DB["store"] = st
+    global SECRET
+    if not os.environ.get("DLOWATCH_SECRET"):
+        key = st.get_meta("token_key")
+        if not key:
+            key = os.urandom(32).hex()
+            st.set_meta("token_key", key)
+        SECRET = key.encode()
+    with LOCK:
+        ALERTS.update(st.load("alerts"))
+        REPORTS.update(st.load("reports"))
+        JOBS.update(st.load("jobs"))
+        LABELS.extend(sorted(st.load("crew_results").values(), key=lambda l: l.get("at") or 0))
+        LEAKS.update(st.load("network_leaks"))
+        CODE_COUNTER["n"] = st.get_meta("report_counter", CODE_COUNTER["n"])
+        first = st.get_meta("first_start")
+        if first is None:
+            first = NOW
+            st.set_meta("first_start", first)
+        FAULT_EPOCH["t"] = first
+        if st.users_count() == 0:
+            for login, u in STAFF.items():
+                st.add_user(login, "staff", u["role"], u["name"], u["password"])
+            for login, u in CREW_USERS.items():
+                st.add_user(login, "crew", "crew", u["name"], u["pin"], u["crew_id"])
+            log.info("Accounts created from config/people.json")
+        VERSION["n"] += 1
+    # if the server was off, the network kept running: spring the leaks of that time (up to 2 days)
+    last = st.get_meta("last_tick")
+    if last and NOW - last > STEP_S:
+        world_spawn(max(last, NOW - 2 * 86400), NOW, random.Random())
+    refresh()
+    scan_all()
+    flush()
+    print(f"DloWatch: database {st.path.name}, {len(ALERTS)} alerts, {len(REPORTS)} reports, "
+          f"{len([l for l in LEAKS.values() if not l['end']])} unfixed leaks in the network")
+    if run_loop and not LIVE_STATE["running"]:
+        LIVE_STATE["running"] = True
+        threading.Thread(target=_loop, daemon=True, name="dlowatch-live").start()
