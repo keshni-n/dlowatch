@@ -684,3 +684,509 @@ def zone_flow_stats(zone, rs=None):
             "balance_gap_pct": round(gap_pct, 1), "inlet_trust": meter_trust(m["id"]),
             "weekday_baseline": weekday_ok}
 
+
+# ============================================================== alerts and the rules engine
+ALERTS = {}      # alert_id -> alert dict (our own store, richer than api.ALERTS)
+REPORTS = {}     # code -> public report
+JOBS = {}        # job_id -> job
+LABELS = []      # crew results, used to test and retrain the model
+CREWS = PEOPLE["crews"]
+RULESET = scoring.ACTIVE           # newest ruleset, used for new alerts
+
+
+# ---------------------------------------------------------------- the anomaly model, with a fallback
+# The model only helps. If it is switched off, times out or fails, alerts still come from the meters.
+MODEL = {"enabled": os.environ.get("DLOWATCH_MODEL", "on").lower() != "off",
+         "timeout_s": float(os.environ.get("DLOWATCH_MODEL_TIMEOUT", "5")),
+         "last_error": None, "last_ok": None}
+_POOL = ThreadPoolExecutor(max_workers=2)
+
+
+def model_status():
+    if not MODEL["enabled"]:
+        return "off"
+    return "unavailable" if MODEL["last_error"] and (MODEL["last_ok"] or 0) < MODEL["last_error"][0] else "online"
+
+
+def ask_model(zone, readings):
+    """(prediction, status). status is ok, off or unavailable. Never raises."""
+    if not MODEL["enabled"]:
+        return None, "off"
+    if zone not in api.MODELS:
+        MODEL["last_error"] = (time.time(), f"no model for zone {zone}")
+        return None, "unavailable"
+    try:
+        fut = _POOL.submit(lambda: api.add_latlon(api.predict(api.MODELS, zone, readings)))
+        pred = fut.result(timeout=MODEL["timeout_s"])
+        MODEL["last_ok"] = time.time()
+        return pred, "ok"
+    except FuturesTimeout:
+        MODEL["last_error"] = (time.time(), f"no answer within {MODEL['timeout_s']} s")
+    except Exception as e:      # a broken model file must not stop the alerts
+        MODEL["last_error"] = (time.time(), f"{type(e).__name__}: {e}")
+    log.warning("Model unavailable for %s: %s", zone, MODEL["last_error"][1])
+    return None, "unavailable"
+
+
+def simulate(pipe_id, size, demand_scale=1.0, sensor_noise_mm=0.0, rng=None, coeff=None):
+    """Run an EPANET leak on one pipe and return what the meters would see (no model).
+    demand_scale and sensor_noise_mm add the same kind of noise the training data had."""
+    zone = api.PIPE_ZONE.get(pipe_id)
+    if zone not in api.ZONES:
+        raise HTTPException(400, "Pick a pipe inside a zone")
+    wn = wntr.network.WaterNetworkModel(api.ZONES[zone]["inp"])
+    wn = wntr.morph.split_pipe(wn, pipe_id, f"{pipe_id}_LEAK_B", "LEAK_NODE", split_at_point=0.5)
+    wn.get_node("LEAK_NODE").emitter_coefficient = (coeff if coeff is not None else api.LEAK_SIZES[size]) / 1000
+    wn.options.hydraulic.demand_multiplier = demand_scale
+    res = api.run_zone(wn)
+    api.cleanup()
+    readings = add_noise(api.features_from_results(zone, res), sensor_noise_mm, rng)
+    flow = float(res.node["demand"].loc[min(api.HOURS) * 3600, "LEAK_NODE"]) * 1000
+    x, y = wn.get_node("LEAK_NODE").coordinates
+    lon, lat = api.to_latlon.transform(x, y)
+    truth = {"pipe_id": pipe_id, "zone": zone, "size": size, "leak_flow_lps": round(flow, 2),
+             "water_lost_m3_per_day": round(flow * 86.4, 1), "latlon": [round(lat, 6), round(lon, 6)]}
+    return zone, readings, truth
+
+
+def add_noise(readings, sensor_noise_mm, rng):
+    if not sensor_noise_mm:
+        return readings
+    rng = rng or random.Random()
+    return {k: (round(v + rng.gauss(0, sensor_noise_mm), 2) if k.startswith("dp_mm_") else v) for k, v in readings.items()}
+
+
+def simulate_normal(zone, demand_scale=1.0, sensor_noise_mm=0.0, rng=None):
+    """A normal day with no leak (water use a bit higher or lower than usual), as the meters would see it."""
+    wn = wntr.network.WaterNetworkModel(api.ZONES[zone]["inp"])
+    wn.options.hydraulic.demand_multiplier = demand_scale
+    res = api.run_zone(wn)
+    api.cleanup()
+    return add_noise(api.features_from_results(zone, res), sensor_noise_mm, rng)
+
+
+def scan_zone(zone, readings, reports=()):
+    """
+    What the rules say about a zone right now, without knowing of any leak.
+    Used by the evaluation to count false alarms on normal days.
+    """
+    dp = {k.split("_h03_")[1]: v for k, v in readings.items() if "_h03_" in k}
+    pred, status = ask_model(zone, readings)
+    search = search_from_model(pred) if pred and pred.get("leak") else search_from_meters(zone, dp, readings)
+    a = {"id": "scan", "zone": zone, "kind": "slow", "status": "open", "model": pred or {}, "model_status": status,
+         "search": search, "dp_mm": dp, "reports": list(reports), "ruleset": RULESET, "started": NOW, "created": NOW,
+         "streets": []}
+    return a, score_alert(a)
+
+
+def pipes_near(zone, lat, lon, radius_m):
+    out = []
+    for f in api.GEO["pipes"]["features"]:
+        p = f["properties"]
+        if p.get("zone") != zone or p.get("status", "open") != "open":
+            continue
+        if any(km(lat, lon, c[1], c[0]) * 1000 <= radius_m for c in f["geometry"]["coordinates"]):
+            out.append(p["id"])
+    return out
+
+
+def search_from_model(pred):
+    areas = [{"area": a["area"], "probability": a["probability"], "centre_latlon": a["centre_latlon"],
+              "radius_m": a["radius_m"], "pipes": a["pipes_to_check"]} for a in pred.get("top_areas", [])]
+    return {"source": "model", "best_guess": pred.get("best_guess_latlon"), "areas": areas,
+            "flow_lps": pred.get("leak_flow_lps"), "m3_day": pred.get("water_lost_m3_per_day")}
+
+
+def search_from_meters(zone, dp, readings):
+    """
+    No model: search around the trusted sensor with the biggest pressure drop, size from the inlet meter.
+    Tested on 24 simulated leaks: typically about 700 m off, against about 300 m for the model,
+    so the radius (from the ruleset) is wider.
+    """
+    rs = scoring.get(RULESET)
+    fb = rs.get("fallback_search", {})
+    flow = max(0.0, readings.get(f"inflow_change_lps_h{min(api.HOURS):02d}", 0.0))
+    size = {"flow_lps": round(flow, 2) or None, "m3_day": round(flow * 86.4, 1) or None}
+    trusted = [(mm, s) for s, mm in dp.items() if mm > 0 and meter_trust(s) >= rs["trust"]["min"]]
+    if not trusted:
+        return {"source": "meters", "best_guess": None, "areas": [], **size}
+    mm, sensor = max(trusted)
+    lon, lat = NODE[sensor]["geometry"]["coordinates"]
+    radius = fb.get("radius_m", 1200)
+    area = {"area": "S1", "probability": None, "centre_latlon": [round(lat, 6), round(lon, 6)], "radius_m": radius,
+            "pipes": pipes_near(zone, lat, lon, radius), "from_sensors": [sensor]}
+    return {"source": "meters", "best_guess": area["centre_latlon"], "areas": [area], **size}
+
+
+# ---------------------------------------------------------------- settings files, with fallbacks
+PRIORITY = load_settings("priority.json", PRIORITY_DEFAULT)
+
+# pipe midpoints and junction demand, worked out once from the network files
+PIPE_MID = {}
+for _f in api.GEO["pipes"]["features"]:
+    _p, _c = _f["properties"], _f["geometry"]["coordinates"]
+    _m = _c[len(_c) // 2]
+    PIPE_MID[_p["id"]] = {"lat": _m[1], "lon": _m[0], "length_m": _p.get("length_m") or 0, "street": _p.get("street"),
+                          "d": _p.get("diameter_mm") or 0, "road": _p.get("road_type"), "zone": _p.get("zone")}
+JUNCTIONS = {}
+for _f in api.GEO["nodes"]["features"]:
+    _p = _f["properties"]
+    if _p["id"].startswith("J_") and _p.get("base_demand_lps"):
+        JUNCTIONS.setdefault(_p.get("zone"), []).append((_f["geometry"]["coordinates"][1], _f["geometry"]["coordinates"][0], _p["base_demand_lps"]))
+
+
+# ---------------------------------------------------------------- pipe suspects and repair priority
+def _xy(lat, lon):
+    """Rough metres east/north, good enough for grouping pipes into blocks across a small island."""
+    return lon * 111320 * math.cos(math.radians(-20.1)), lat * 110540
+
+
+NAMED_BY_ZONE = {}
+for _pid, _m in PIPE_MID.items():
+    if _m["street"]:
+        NAMED_BY_ZONE.setdefault(_m["zone"], []).append((_m["lat"], _m["lon"], _m["street"]))
+
+
+def block_name(zone, items, lat, lon):
+    streets = Counter(m["street"] for _, _, m in items if m["street"])
+    if streets:
+        main = streets.most_common(1)[0][0]
+        return main if len(streets) == 1 else f"{main} and nearby streets"
+    near = min(NAMED_BY_ZONE.get(zone, []), key=lambda n: (n[0] - lat) ** 2 + (n[1] - lon) ** 2, default=None)
+    return f"Side streets near {near[2]}" if near else "Unnamed side streets"
+
+
+def suspects(a, keep_all=False):
+    """
+    Rank blocks of pipes to check. Each pipe in the search areas gets
+    (area likelihood) x (closeness to the best guess). Pipes are grouped into square blocks
+    (size from config), named after their main street, and the shares add up to 100%.
+    """
+    srch = a.get("search") or {}
+    areas, g = srch.get("areas") or [], srch.get("best_guess")
+    if not areas or not g:
+        return []
+    cfg = PRIORITY["suspects"]
+    spread = max(50.0, float(cfg["location_spread_m"]))
+    size = max(50.0, float(cfg.get("stretch_size_m", 300)))
+    weight = {}
+    for ar in areas:
+        p_area = ar["probability"] if ar.get("probability") is not None else 1.0
+        for pid in ar["pipes"]:
+            m = PIPE_MID.get(pid)
+            if not m:
+                continue
+            d = km(g[0], g[1], m["lat"], m["lon"]) * 1000
+            w = p_area * math.exp(-0.5 * (d / spread) ** 2)
+            if w > weight.get(pid, 0):
+                weight[pid] = w
+    total = sum(weight.values())
+    if total <= 0:
+        return []
+    blocks = {}
+    for pid, w in weight.items():
+        m = PIPE_MID[pid]
+        x, y = _xy(m["lat"], m["lon"])
+        blocks.setdefault((int(x // size), int(y // size)), []).append((w / total, pid, m))
+    out = []
+    for items in blocks.values():
+        items.sort(key=lambda x: -x[0])
+        share = sum(x[0] for x in items)
+        lat = sum(x[0] * x[2]["lat"] for x in items) / share
+        lon = sum(x[0] * x[2]["lon"] for x in items) / share
+        out.append({"street": block_name(a["zone"], items, lat, lon), "probability": round(share, 3),
+                    "pipes": [x[1] for x in items] if keep_all else [x[1] for x in items][: cfg["max_pipes_per_stretch"]],
+                    "pipe_count": len(items), "length_m": round(sum(x[2]["length_m"] for x in items)),
+                    "centre_latlon": [round(lat, 6), round(lon, 6)],
+                    "distance_from_guess_m": round(km(g[0], g[1], lat, lon) * 1000),
+                    "max_diameter_mm": max(x[2]["d"] for x in items),
+                    "roads": sorted({x[2]["road"] for x in items if x[2]["road"]})})
+    out.sort(key=lambda x: -x["probability"])
+    top = out[: cfg["top"]]
+    # several blocks on the same street: say which part, seen from the best guess
+    names = Counter(sp["street"] for sp in top)
+    for sp in top:
+        if names[sp["street"]] > 1:
+            d = sp["distance_from_guess_m"]
+            where = compass(g, sp["centre_latlon"])
+            sp["street"] = f"{sp['street']} ({where})" if where == "middle" else f"{sp['street']} ({where}, {int(round(d, -1))} m)"
+    for i, sp in enumerate(top):
+        sp["rank"] = i + 1
+    return top
+
+
+def compass(a, b):
+    dy = (b[0] - a[0]) * 110540
+    dx = (b[1] - a[1]) * 111320 * math.cos(math.radians(a[0]))
+    if math.hypot(dx, dy) < 60:
+        return "middle"
+    ang = (math.degrees(math.atan2(dx, dy)) + 360) % 360
+    return ["north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"][int((ang + 22.5) // 45) % 8]
+
+
+def households_near(zone, stretches):
+    """Households supplied in the suspect blocks: junction demand inside them / household water use."""
+    if not stretches:
+        return None
+    size = float(PRIORITY["suspects"].get("stretch_size_m", 300))
+    cells = set()
+    for s in stretches:
+        x, y = _xy(*s["centre_latlon"])
+        cells.add((int(x // size), int(y // size)))
+    lps = 0.0
+    for lat, lon, q in JUNCTIONS.get(zone, []):
+        x, y = _xy(lat, lon)
+        if (int(x // size), int(y // size)) in cells:
+            lps += q
+    per_day = PRIORITY["household_use_litres_per_day"] or 600
+    return int(round(lps * 86400 / per_day, -1))
+
+
+def repair_ease(stretches):
+    """0 (hard) to 1 (easy), with the reasons, from pipe size, busy roads and how much pipe must be walked."""
+    if not stretches:
+        return {"value": None, "label": "unknown", "reasons": ["No search area yet"]}
+    e = PRIORITY["ease"]
+    d = max(s["max_diameter_mm"] for s in stretches[:3])
+    roads = {r for s in stretches[:3] for r in s["roads"]}
+    walk_km = sum(s["length_m"] for s in stretches[:3]) / 1000
+    pipe_hard = 1.0 if d >= e["big_pipe_mm"] else 0.5 if d >= e["medium_pipe_mm"] else 0.0
+    road_hard = 1.0 if roads & set(e["busy_roads"]) else 0.0
+    search_hard = min(1.0, walk_km / max(0.1, e["wide_search_km"]))
+    value = round(1 - (pipe_hard + road_hard + search_hard) / 3, 2)
+    reasons = [f"Pipes up to {d} mm" + (" (big main)" if pipe_hard == 1 else ""),
+               "Busy road, traffic control needed" if road_hard else "Quiet roads",
+               f"{walk_km:.1f} km of pipe to walk in the top 3 stretches"]
+    label = "easy" if value >= 0.67 else "medium" if value >= 0.34 else "hard"
+    return {"value": value, "label": label, "reasons": reasons}
+
+
+def repair_items():
+    """Open alerts ranked by what fixing them is worth: water saved first, then households and ease."""
+    rows = []
+    for a in ALERTS.values():
+        if a["status"] != "open":
+            continue
+        view = public_alert_view(a)
+        sp = suspects(a)
+        rows.append({**view, "suspects": sp[:3], "households_est": households_near(a["zone"], sp[:3]),
+                     "ease": repair_ease(sp)})
+    w = PRIORITY["weights"]
+    max_m3 = max([r["water_lost_m3_per_day"] or 0 for r in rows] + [0])
+    max_hh = max([r["households_est"] or 0 for r in rows] + [0])
+    for r in rows:
+        parts = {"water": (r["water_lost_m3_per_day"] or 0) / max_m3 if max_m3 else 0,
+                 "households": (r["households_est"] or 0) / max_hh if max_hh else 0,
+                 "ease": r["ease"]["value"] if r["ease"]["value"] is not None else 0}
+        r["priority"] = round(100 * sum(w[k] * parts[k] for k in parts) / (sum(w.values()) or 1))
+        r["priority_parts"] = {k: round(v, 2) for k, v in parts.items()}
+        r["litres_per_hour"] = round((r["water_lost_m3_per_day"] or 0) * 1000 / 24) or None
+    rows.sort(key=lambda r: (-r["priority"], -(r["water_lost_m3_per_day"] or 0)))
+    for i, r in enumerate(rows):
+        r["rank"] = i + 1
+    return rows
+
+
+# ---------------------------------------------------------------- detectors: data -> signals
+def collect_signals(a, rs):
+    """Every signal the meters, the model and the public give for this alert, plus AI findings that were rejected."""
+    zone = a["zone"]
+    fs = zone_flow_stats(zone, rs)
+    P = rs["points"]
+    full, low = rs["trust"]["full"], rs["trust"]["min"]
+    inlet_w = 1.0 if fs["inlet_trust"] >= full else 0.5 if fs["inlet_trust"] >= low else 0.0
+    sig, rejected = [], []
+
+    def add(code, finding, evidence, source, pts, weight=1.0):
+        if pts > 0 and weight > 0:
+            sig.append({"code": code, "finding": finding, "evidence": evidence, "source": source,
+                        "points": pts, "weight": weight})
+
+    if a["kind"] != "public":
+        p = fs["night_pct"]
+        nf_pts = scoring.tier(p, P["night_pct"])
+        need = (rs.get("persistence") or {}).get("min_nights", 0)
+        if nf_pts and fs["nights_running"] < need:
+            rejected.append({"code": "NF-01", "finding": f"Night flow {p:.0f}% above the usual level",
+                             "reason": f"High for {fs['nights_running']} night only so far. It counts once it stays high {need} nights in a row"})
+        else:
+            add("NF-01", f"Night flow {p:.0f}% above the usual level",
+                f"Inlet {api.ZONES[zone]['inlet']}, 02:00 to 04:00, {fs['last_night_lps']} vs usual {fs['baseline_lps']} L/s",
+                "Rules", nf_pts, inlet_w)
+        if a["kind"] == "burst":
+            add("NF-03", f"Flow jumped {fs['now_pct']:.0f}% in the last hour",
+                f"{fs['now_lps']} L/s now vs usual {fs['usual_now_lps']} L/s at this time", "Rules",
+                scoring.tier(fs["now_pct"], P["now_pct"]), inlet_w)
+        nr = P["nights_running"]
+        if fs["nights_running"] >= nr["min_nights"]:
+            add("NF-02", f"Still high {fs['nights_running']} nights in a row",
+                "Night flow has not gone back to its usual level", "Rules", nr["points"], inlet_w)
+        g = fs["balance_gap_pct"]
+        add("WB-01", "More water going in than expected use",
+            f"Last 24 h: {fs['water_in_m3']} m³ in vs {fs['expected_m3']} m³ expected (+{g:.1f}%)",
+            "Rules", scoring.tier(g, P["balance_pct"]), inlet_w)
+        drops = []
+        for s, mm in a.get("dp_mm", {}).items():
+            tr = meter_trust(s)
+            if tr >= low:
+                drops.append((mm * (1 if tr >= full else 0.5), s, tr))
+        drops.sort(reverse=True)
+        if drops:
+            mm, s, tr = drops[0]
+            add("PR-01", "Pressure dropped at nearby sensors",
+                f"{s}: {mm:.0f} mm lower than normal (sensor trust {tr}%)", "Rules", scoring.tier(mm, P["pressure_mm"]))
+        if a["kind"] == "burst":
+            add("PR-02", "Sudden pressure drop with a flow jump",
+                f"Started {mu_time(a['started'])}, typical of a burst main", "Rules", P["burst"])
+
+        # AI findings, from a fixed list only, and checked against the meters when the ruleset says so
+        pred = a.get("model") or {}
+        meter_codes = {x["code"] for x in sig}
+        if pred.get("leak_probability") is not None:
+            pts = scoring.tier(pred["leak_probability"], P["ai_probability"])
+            if pts:
+                if rs.get("ground_ai") and not meter_codes & {"NF-01", "NF-03", "WB-01", "PR-01"}:
+                    rejected.append({"code": "AI-01", "finding": "Model says this is a leak",
+                                     "reason": "No meter signal agrees, so it does not count"})
+                else:
+                    add("AI-01", "Model says this is a leak, not normal use",
+                        f"Leak probability {pred['leak_probability']:.0%} from zone {zone} detector", "AI model", pts)
+        top = (pred.get("top_areas") or [None])[0]
+        ar = P["ai_area"]
+        if top and top.get("probability", 0) >= ar["min_probability"]:
+            ok, why = area_grounded(a, top, rs)
+            if rs.get("ground_ai") and not ok:
+                rejected.append({"code": "AI-02", "finding": f"Model points to area {top['area']}", "reason": why})
+            else:
+                add("AI-02", "Model points to one search area",
+                    f"Area {top['area']}: {top['probability']:.0%} likely, {top['radius_m']:.0f} m radius" + (f". {why}" if ok and rs.get("ground_ai") else ""),
+                    "AI model", ar["points"])
+
+    pub = P["public"]
+    linked = [REPORTS[c] for c in a.get("reports", []) if c in REPORTS]
+    phones = len({r["device"] for r in linked})
+    if phones >= pub["min_phones"]:
+        add("PUB-01", f"{phones} people reported water nearby", f"{len(linked)} reports from {phones} different phones",
+            "Public", pub["points_without_meters"] if a["kind"] == "public" else pub["points"])
+    elif phones:
+        add("PUB-00", "Someone reported water nearby", f"{len(linked)} report", "Public", pub["one_report"])
+    return sig, rejected, fs
+
+
+def area_grounded(a, top, rs):
+    """Does anything in the data back up the model's search area?"""
+    g = rs.get("grounding", {})
+    reach = top["radius_m"] + g.get("area_margin_m", 300)
+    clat, clon = top["centre_latlon"]
+    for s, mm in a.get("dp_mm", {}).items():
+        if mm >= g.get("area_drop_mm", 10) and meter_trust(s) >= rs["trust"]["min"]:
+            lon, lat = NODE[s]["geometry"]["coordinates"]
+            if km(clat, clon, lat, lon) * 1000 <= reach:
+                return True, f"Backed by sensor {s} ({mm:.0f} mm drop inside the area)"
+    for c in a.get("reports", []):
+        r = REPORTS.get(c)
+        if r and km(clat, clon, r["lat"], r["lon"]) * 1000 <= reach:
+            return True, f"Backed by public report {c} inside the area"
+    return False, "No trusted sensor or report inside this area saw anything, so it does not count"
+
+
+def score_alert(a):
+    """Rules decide the score with the ruleset the alert was created under. Every point is traced."""
+    rs = scoring.get(a.get("ruleset", RULESET))
+    sig, rejected, fs = collect_signals(a, rs)
+    out = scoring.score(sig, rs)
+    if fs["inlet_trust"] < rs["trust"]["full"] and a["kind"] != "public":
+        out["notes"].append(f"Inlet meter trust is {fs['inlet_trust']}%, so its signals count for half.")
+    if a.get("model_status") in ("off", "unavailable") and a["kind"] != "public":
+        out["notes"].append("AI assist was " + ("switched off" if a["model_status"] == "off" else "not available")
+                            + " for this alert. Scored by the rules only, search area from the pressure sensors.")
+    return {**out, "rejected": rejected, "ruleset": rs["version"], "flow": fs}
+
+
+def public_alert_view(a):
+    s = score_alert(a)
+    srch = a.get("search") or {}
+    top = (srch.get("areas") or [None])[0]
+    return {
+        "id": a["id"], "zone": a["zone"], "zone_name": ZONE_NAMES.get(a["zone"], a["zone"]),
+        "kind": a["kind"], "status": a["status"], "created": a["created"], "started": a["started"],
+        "resolved": a.get("resolved"), "score": s["score"], "level": s["level"],
+        "headline": headline(a, s), "street": a.get("streets", [None])[0] if a.get("streets") else None,
+        "water_lost_m3_per_day": srch.get("m3_day"),
+        "best_guess_latlon": srch.get("best_guess") or a.get("latlon"),
+        "job": job_summary(a.get("job")), "report_count": len(a.get("reports", [])),
+        "top_area": {"area": top["area"], "probability": top["probability"]} if top else None,
+        "model_status": a.get("model_status", "ok"), "search_source": srch.get("source"), "ruleset": s["ruleset"],
+    }
+
+
+def headline(a, s):
+    codes = [x["code"] for x in s["trace"]]
+    if "PR-02" in codes:
+        return "Pressure drop and flow jump: likely burst"
+    if "NF-01" in codes and s["flow"]["nights_running"] >= 2:
+        return f"Night flow up {s['flow']['nights_running']} nights in a row"
+    if "NF-01" in codes:
+        return "Night flow above usual"
+    if any(c.startswith("PUB") for c in codes):
+        return f"{len(a.get('reports', []))} public reports close together"
+    return "Small change, keep watching"
+
+
+def job_summary(job_id):
+    j = JOBS.get(job_id) if job_id else None
+    if not j:
+        return None
+    return {"id": j["id"], "crew": CREWS[j["crew_id"]]["name"], "status": j["status"], "outcome": j.get("outcome")}
+
+
+def create_leak_alert(pipe_id, size, started, kind, fixed_at=None, demand_scale=1.0, sensor_noise_mm=0.0, rng=None, coeff=None):
+    """
+    Run a real EPANET leak, then let the RULES decide whether it becomes an alert.
+    The model is asked for extra findings and a search area; if it is off or fails,
+    the search area comes from the pressure sensors instead.
+    Returns (alert_id or None, model_status).
+    """
+    zone, readings, truth = simulate(pipe_id, size, demand_scale, sensor_noise_mm, rng, coeff)
+    leak_id = uuid.uuid4().hex[:8]
+    dp = {k.split("_h03_")[1]: v for k, v in readings.items() if "_h03_" in k}
+    LEAKS[leak_id] = {"id": leak_id, "zone": zone, "pipe_id": pipe_id, "flow_lps": truth["leak_flow_lps"],
+                      "start": started, "end": fixed_at, "kind": kind, "dp_mm": dp, "latlon": truth["latlon"],
+                      "dp_mm_h8": {k.split("_h08_")[1]: v for k, v in readings.items() if "_h08_" in k}}
+    VERSION["n"] += 1
+
+    pred, status = ask_model(zone, readings)
+    search = search_from_model(pred) if pred and pred.get("leak") else search_from_meters(zone, dp, readings)
+    check = {}
+    if search.get("best_guess"):
+        g = search["best_guess"]
+        check["distance_error_m"] = round(km(g[0], g[1], *truth["latlon"]) * 1000)
+        check["pipe_in_search"] = any(pipe_id in ar["pipes"] for ar in search["areas"])
+
+    aid = uuid.uuid4().hex[:8]
+    created = started + 15 * 60 if kind == "burst" else next_3am(started)
+    top_pipes = search["areas"][0]["pipes"] if search["areas"] else []
+    a = {"id": aid, "zone": zone, "kind": kind, "status": "open", "leak_id": leak_id,
+         "started": started, "created": min(created, NOW), "model": pred or {}, "model_status": status,
+         "search": search, "dp_mm": dp, "truth": truth, "check": check, "streets": streets_of(top_pipes),
+         "reports": [], "job": None, "events": [], "ruleset": RULESET}
+    ALERTS[aid] = a
+    # the rules decide: below Watch there is no alert (the leak still affects the meters)
+    if score_alert(a)["score"] < scoring.get(RULESET)["bands"]["watch"]:
+        del ALERTS[aid]
+        return None, status
+    if fixed_at:
+        a["status"] = "resolved"
+        a["resolved"] = fixed_at
+    return aid, status
+
+
+def next_3am(t):
+    local = t + 4 * 3600
+    day = local // 86400 * 86400
+    at = day + 3 * 3600
+    if at <= local:
+        at += 86400
+    return at - 4 * 3600
+
+
