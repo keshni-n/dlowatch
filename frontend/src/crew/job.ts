@@ -45,6 +45,30 @@ import { LeakMap, MapCircle, MapPoint } from '../shared/leak-map';
               @if (!here()) { <div class="tiny muted">Allow location to sort by distance.</div> }
             </div>
           }
+          @if (j.reports.length) {
+            <div class="card stack reps">
+              <div class="label">What the public sent ({{ j.reports.length }})</div>
+              @for (r of j.reports; track r.code) {
+                <div class="rep">
+                  <div class="row between">
+                    <b>{{ r.kind_kreol }}<span class="small muted"> · {{ r.kind_en }}</span></b>
+                    <span class="tiny muted mono">{{ ago(r.created) }}</span>
+                  </div>
+                  @if (r.note) { <div class="small">"{{ r.note }}"</div> }
+                  @if (r.has_photo) {
+                    @if (photos()[r.code]; as src) {
+                      <img [src]="src" [class.big]="big() === r.code" (click)="big.set(big() === r.code ? '' : r.code)"
+                           alt="Photo sent with report {{ r.code }}">
+                    } @else {
+                      <div class="tiny muted">Loading the photo...</div>
+                    }
+                  }
+                  @if (r.photo_hint) { <div class="tiny muted">{{ r.photo_hint }}</div> }
+                  <div class="tiny muted">{{ r.code }}</div>
+                </div>
+              }
+            </div>
+          }
           <div class="card">
             <div class="label">Why this was flagged</div>
             <ul>@for (r of j.reasons; track r) { <li>{{ r }}</li> }</ul>
@@ -93,6 +117,11 @@ import { LeakMap, MapCircle, MapPoint } from '../shared/leak-map';
     .seg button:disabled { opacity: 0.5; }
     .srow { display: flex; gap: 10px; align-items: center; text-align: left; width: 100%; min-height: 48px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); cursor: pointer; }
     .srow.on { border: 2px solid var(--high-bg); }
+    .reps { gap: 10px; }
+    .rep { display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+    .rep:first-of-type { border-top: none; padding-top: 0; }
+    .rep img { width: 100%; max-height: 220px; object-fit: cover; border-radius: 10px; cursor: zoom-in; }
+    .rep img.big { max-height: none; object-fit: contain; cursor: zoom-out; }
     .n { width: 22px; height: 22px; border-radius: 99px; background: var(--chip); display: flex; align-items: center; justify-content: center; font-size: 12px; flex: none; }
   `],
 })
@@ -118,6 +147,8 @@ export class CrewJobPage {
     return j.suspects.find(s => s.rank === this.pick())?.pipes ?? j.pipes;
   });
   error = signal('');
+  photos = signal<Record<string, string>>({});
+  big = signal('');
 
   circles = computed<MapCircle[]>(() => {
     const j = this.j();
@@ -136,13 +167,29 @@ export class CrewJobPage {
 
   async load(id: string) {
     try {
-      this.j.set(await this.api.crewJob(id));
+      const j = await this.api.crewJob(id);
+      this.j.set(j);
+      this.loadPhotos(j);
       this.pipes.set(await this.api.crewJobPipes(id));
     } catch (e) { this.error.set(errorText(e)); }
   }
 
+  /** Report photos come one by one after the job, so the map and the job show first. */
+  private loadPhotos(j: Job) {
+    for (const r of j.reports.filter(x => x.has_photo && !this.photos()[x.code])) {
+      this.api.crewReportPhoto(j.id, r.code)
+        .then(p => this.photos.update(m => ({ ...m, [r.code]: p.photo })))
+        .catch(() => undefined);
+    }
+  }
+
+  ago(t: number) {
+    const m = Math.max(0, Math.round((Date.now() / 1000 - t) / 60));
+    return m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`;
+  }
+
   async setStatus(s: 'on_the_way' | 'on_site') {
-    try { this.j.set(await this.api.crewStatus(this.id(), s)); } catch (e) { this.error.set(errorText(e)); }
+    try { const j = await this.api.crewStatus(this.id(), s); this.j.set(j); this.loadPhotos(j); } catch (e) { this.error.set(errorText(e)); }
   }
 
   result(outcome: string) {

@@ -6,6 +6,7 @@ import { I18n } from '../core/i18n';
 import { PublicNearby } from '../core/models';
 import { MyReports } from '../core/my-reports';
 import { shrinkImage } from '../shared/bits';
+import { PhotoCheck, checkPhoto } from '../shared/photo-check';
 import { LeakMap } from '../shared/leak-map';
 import { PublicLive } from './live';
 
@@ -25,6 +26,25 @@ function deviceId(): string {
     }
     return id;
   } catch { return 'nostore-' + Math.random().toString(36).slice(2, 12); }
+}
+
+/** The report being filled in is kept for this tab, so it survives a reload: some phones reload the page
+ *  after the camera app was open (low memory), and the dev server reloads it when it reconnects. */
+const DRAFT_KEY = 'dlowatch.report-draft';
+interface Draft { kind: string; pin: [number, number] | null; note: string; photo: string; check?: PhotoCheck | null; }
+
+function readDraft(): Draft | null {
+  try { return JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null'); } catch { return null; }
+}
+
+function writeDraft(d: Draft | null) {
+  try {
+    if (!d || (!d.kind && !d.note && !d.photo)) sessionStorage.removeItem(DRAFT_KEY);
+    else sessionStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+  } catch {
+    // storage full (big photo): keep the rest of the report at least
+    try { if (d) sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ ...d, photo: '', check: null })); } catch { /* no storage */ }
+  }
 }
 
 /** Centre of the network zones, used only when the phone cannot give a location. */
@@ -58,7 +78,7 @@ function networkCentre(fc: GeoJSON.FeatureCollection | null | undefined): [numbe
 
       <section class="card stack">
         <label class="photo">
-          <input type="file" accept="image/*" capture="environment" (change)="pickPhoto($event)">
+          <input #cam type="file" accept="image/*" capture="environment" (change)="pickPhoto($event)">
           @if (photo()) {
             <img [src]="photo()" alt="Your photo">
           } @else {
@@ -66,7 +86,26 @@ function networkCentre(fc: GeoJSON.FeatureCollection | null | undefined): [numbe
             <b>{{ i.t('photo') }}</b><span class="tiny muted">{{ i.t('photoOpt') }}</span>
           }
         </label>
-        @if (photo()) { <button type="button" class="btn ghost" (click)="photo.set('')">{{ i.t('remove') }}</button> }
+        @if (photo()) {
+          @if (checking()) {
+            <div class="tiny muted">{{ i.t('photoChecking') }}</div>
+          } @else if (check(); as c) {
+            @if (c.ok) {
+              <div class="check ok small">✓ {{ i.t('photoOk') }}</div>
+            } @else if (!c.kept_anyway) {
+              <div class="check warn stack" role="alert">
+                <b class="small">{{ issueText(c) }}</b>
+                <div class="row">
+                  <button type="button" class="btn grow" (click)="cam.click()">{{ i.t('retake') }}</button>
+                  <button type="button" class="btn ghost grow" (click)="keepPhoto()">{{ i.t('keepPhoto') }}</button>
+                </div>
+              </div>
+            } @else {
+              <div class="tiny muted">{{ i.t('photoKept') }}</div>
+            }
+          }
+          <button type="button" class="btn ghost" (click)="removePhoto()">{{ i.t('remove') }}</button>
+        }
       </section>
 
       <section class="card stack">
@@ -101,7 +140,7 @@ function networkCentre(fc: GeoJSON.FeatureCollection | null | undefined): [numbe
           </div>
         </fieldset>
         <label class="field">{{ i.t('note') }}
-          <input class="input" name="note" [(ngModel)]="note" maxlength="300">
+          <input class="input" name="note" [(ngModel)]="note" (ngModelChange)="saveDraft()" maxlength="300">
         </label>
       </section>
 
@@ -121,6 +160,9 @@ function networkCentre(fc: GeoJSON.FeatureCollection | null | undefined): [numbe
       border: 2px dashed var(--line-hover); border-radius: 14px; background: var(--surface-2); cursor: pointer; overflow: hidden; }
     .photo input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
     .photo img { width: 100%; height: 100%; object-fit: cover; }
+    .check { border-radius: 10px; padding: 10px 12px; }
+    .check.ok { color: var(--ok-text); background: var(--ok-pill); font-weight: 600; }
+    .check.warn { background: var(--watch-pill); color: var(--text); gap: 10px; }
     .mini { min-height: 38px; padding: 0 12px; font-size: 13px; }
     .known { background: var(--watch-pill); color: var(--text); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
     fieldset { border: none; margin: 0; padding: 0; }
@@ -138,6 +180,8 @@ export class PublicReport {
   kind = signal('');
   pin = signal<[number, number] | null>(null);
   photo = signal('');
+  check = signal<PhotoCheck | null>(null);
+  checking = signal(false);
   note = '';
   busy = signal(false);
   error = signal('');
@@ -147,7 +191,17 @@ export class PublicReport {
 
   constructor() {
     if (!this.live.areas()) this.live.load();
+    const d = readDraft();
+    if (d) {
+      this.kind.set(d.kind || '');
+      this.note = d.note || '';
+      this.photo.set(d.photo || '');
+      this.check.set(d.photo ? d.check ?? null : null);
+      if (d.pin) this.pin.set(d.pin);
+    }
     this.locate();
+    // keep the report safe while it is being filled in
+    effect(() => { this.kind(); this.pin(); this.photo(); this.check(); this.saveDraft(); });
     // when the pin moves, ask whether this problem is already known
     effect(() => {
       const key = this.pinKey();
@@ -159,10 +213,17 @@ export class PublicReport {
 
   label(k: (typeof KINDS)[number]) { return k[this.i.lang()]; }
 
+  saveDraft() {
+    writeDraft({ kind: this.kind(), pin: this.pin(), note: this.note, photo: this.photo(), check: this.check() });
+  }
+
   locate() {
     if (!navigator.geolocation) { this.fallback(); return; }
     navigator.geolocation.getCurrentPosition(
-      p => { this.pin.set([+p.coords.latitude.toFixed(5), +p.coords.longitude.toFixed(5)]); this.locMsg.set(''); },
+      p => {
+        if (!readDraft()?.pin) this.pin.set([+p.coords.latitude.toFixed(5), +p.coords.longitude.toFixed(5)]);
+        this.locMsg.set('');
+      },
       () => this.fallback(),
       { enableHighAccuracy: true, timeout: 8000 },
     );
@@ -178,9 +239,34 @@ export class PublicReport {
   }
 
   async pickPhoto(e: Event) {
-    const f = (e.target as HTMLInputElement).files?.[0];
+    const input = e.target as HTMLInputElement;
+    const f = input.files?.[0];
+    input.value = '';            // so "Retake" works even if the same file is picked again
     if (!f) return;
-    try { this.photo.set(await shrinkImage(f)); } catch { this.error.set('Could not read that photo.'); }
+    this.error.set('');
+    try {
+      const url = await shrinkImage(f);
+      this.photo.set(url);
+      this.check.set(null);
+      this.checking.set(true);
+      try { this.check.set(await checkPhoto(url, this.kind())); } catch { this.check.set(null); }
+    } catch { this.error.set('Could not read that photo.'); }
+    this.checking.set(false);
+  }
+
+  issueText(c: PhotoCheck) {
+    const k = c.issues[0];
+    return this.i.t(k === 'dark' ? 'photoDark' : k === 'blank' ? 'photoBlank' : k === 'blurry' ? 'photoBlurry' : 'photoNotRelevant');
+  }
+
+  keepPhoto() {
+    const c = this.check();
+    if (c) this.check.set({ ...c, kept_anyway: true });
+  }
+
+  removePhoto() {
+    this.photo.set('');
+    this.check.set(null);
   }
 
   async send() {
@@ -190,8 +276,13 @@ export class PublicReport {
     this.busy.set(true);
     try {
       const [lat, lon] = this.pin()!;
-      const r = await this.api.sendReport({ lat, lon, kind: this.kind(), note: this.note || null, device: deviceId(), photo: this.photo() || null });
+      const c = this.check();
+      // sending while the warning is still showing counts as keeping the photo anyway
+      const photo_check = this.photo() && c ? { ...c, kept_anyway: c.ok ? false : true } : null;
+      const r = await this.api.sendReport({ lat, lon, kind: this.kind(), note: this.note || null, device: deviceId(),
+                                            photo: this.photo() || null, photo_check });
       this.mine.add(r.code, r.status);
+      writeDraft(null);
       this.router.navigate(['/report', r.code], { queryParams: r.note_cleaned ? { sent: 1, cleaned: 1 } : { sent: 1 } });
     } catch (e) {
       this.error.set(errorText(e));

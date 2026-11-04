@@ -31,6 +31,8 @@ export class Api {
   meters() { return this.get<MetersResponse>('/meters'); }
   meter(id: string, hours = 24) { return this.get<MeterDetail>(`/meters/${id}?hours=${hours}`); }
   reports() { return this.get<{ reports: PublicReportRow[]; clusters: Cluster[] }>('/reports'); }
+  reportToAlert(code: string) { return this.post<{ alert: string }>(`/reports/${code}/alert`); }
+  forwardReport(code: string) { return this.post<PublicReportRow>(`/reports/${code}/forward`); }
   reportPhoto(code: string) { return this.get<{ photo: string }>(`/reports/${code}/photo`); }
   crews() { return this.get<{ crews: Crew[]; jobs: Job[]; labels: Label[] }>('/crews'); }
   mapZones() { return this.get<GeoJSON.FeatureCollection>('/map/zones'); }
@@ -47,6 +49,7 @@ export class Api {
   // crew
   crewJobs() { return this.get<Job[]>('/crew/jobs'); }
   crewJob(id: string) { return this.get<Job>(`/crew/jobs/${id}`); }
+  crewReportPhoto(id: string, code: string) { return this.get<{ photo: string }>(`/crew/jobs/${id}/reports/${code}/photo`); }
   crewJobPipes(id: string) { return this.get<GeoJSON.FeatureCollection>(`/crew/jobs/${id}/pipes`); }
   crewStatus(id: string, status: 'on_the_way' | 'on_site') { return this.post<Job>(`/crew/jobs/${id}/status`, { status }); }
   crewResult(id: string, body: unknown) { return this.post<Job>(`/crew/jobs/${id}/result`, body); }
