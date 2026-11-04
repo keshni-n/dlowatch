@@ -59,6 +59,26 @@ Open http://localhost:4200. `npm start` forwards `/api` to the backend on port 8
 
 **On a phone (same Wi-Fi):** run `npm start -- --host 0.0.0.0` and open the "Network" address it prints.
 
+## Public side (no login)
+
+A tab bar on phones (top menu on desktop) with:
+
+- **Home:** live notices on the network, community numbers, your latest report, how reporting works
+- **My area:** map of public notices (being checked, crew working, fixed recently). No scores or meter data
+- **Report:** photo, place, what you see. Warns you if the problem is already known nearby
+- **My reports:** every report sent from this phone, with live status (codes are kept on the phone)
+- **Learn:** check for a leak at home with your water meter, signs of a street leak, saving water
+
+Fallbacks: live info and report statuses are saved on the phone. If the server cannot be reached,
+the pages show the last saved info with a note instead of an error. Learn works fully offline.
+
+Optional settings (environment variables for the backend). If not set, the line is simply not shown:
+
+| Variable | Shown as |
+|---|---|
+| `DLOWATCH_HOTLINE` | Emergency phone number on Home and Learn |
+| `DLOWATCH_UTILITY_NAME` | Name of the water utility |
+
 ## How the score works
 
 The rules decide, the model only helps. Same idea as FraudLens ("the AI reads, the rules decide").
