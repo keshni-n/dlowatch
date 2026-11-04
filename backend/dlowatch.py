@@ -1437,3 +1437,380 @@ def public_reports_batch(codes: str):
     return out
 
 
+# ============================================================== staff endpoints
+@router.get("/overview", dependencies=[Depends(STAFF_ONLY)])
+def overview():
+    refresh()
+    zones = []
+    tot_in = tot_exp = 0
+    for z in api.ZONES:
+        fs = zone_flow_stats(z)
+        tot_in += fs["water_in_m3"]
+        tot_exp += fs["expected_m3"]
+        open_alerts = [public_alert_view(a) for a in ALERTS.values() if a["zone"] == z and a["status"] == "open"]
+        top = max(open_alerts, key=lambda x: x["score"], default=None)
+        zones.append({"zone": z, "name": ZONE_NAMES[z], "score": top["score"] if top else 0,
+                      "level": top["level"] if top else "low", "night_pct": fs["night_pct"],
+                      "avg_demand_lps": ZONE_PROPS[z]["avg_demand_lps"], "pipe_km": ZONE_PROPS[z]["pipe_km"]})
+    alerts = sorted([public_alert_view(a) for a in ALERTS.values() if a["status"] == "open"],
+                    key=lambda x: -x["score"])
+    levels = Counter(a["level"] for a in alerts)
+    ms = meter_list()
+    st = Counter(m["status"] for m in ms)
+    # network night flow: sum of zones, last 7 nights
+    per_night = {}
+    for z in api.ZONES:
+        for n in zone_flow_stats(z)["nights"]:
+            per_night.setdefault(n["night"], 0)
+            per_night[n["night"]] += n["lps"]
+    nights = sorted(per_night.items())[-7:]
+    base = float(np.median([v for _, v in sorted(per_night.items())[:7]]))
+    return {
+        "now": NOW, "water_in_m3": tot_in, "expected_m3": tot_exp,
+        "extra_m3": max(0, tot_in - tot_exp), "extra_pct": round((tot_in - tot_exp) / tot_exp * 100, 1),
+        "alerts": alerts, "levels": dict(levels),
+        "meters": {"total": len(ms), "healthy": st["healthy"], "noisy": st["noisy"] + st["drifting"],
+                   "offline": st["offline"] + st["stuck"]},
+        "zones": zones, "night_flow": [{"night": t, "lps": round(v, 1)} for t, v in nights],
+        "night_baseline_lps": round(base, 1), "ruleset": RULESET,
+    }
+
+
+@router.get("/alerts", dependencies=[Depends(STAFF_ONLY)])
+def alerts(status: Literal["open", "resolved", "all"] = "open"):
+    items = [public_alert_view(a) for a in ALERTS.values() if status == "all" or a["status"] == status]
+    return sorted(items, key=lambda x: (x["status"] != "open", -x["score"]))
+
+
+def series(c, hours, every=1):
+    n = hours * 3600 // STEP_S
+    t, v, f = c["t"][-n:], c["v"][-n:], c["filled"][-n:]
+    rt, rv = c["raw_t"], c["raw_v"]
+    sel = rt >= t[0]
+    return {"t": t[::every].tolist(), "v": [None if np.isnan(x) else round(float(x), 3) for x in v[::every]],
+            "filled": f[::every].tolist(),
+            "raw_t": rt[sel].tolist()[::every], "raw_v": [round(float(x), 3) for x in rv[sel]][::every]}
+
+
+def if_not_fixed(m3_day):
+    """Water (and money, if a price is set) lost if this leak is left for a week, a month or a year."""
+    if not m3_day:
+        return None
+    cost = report_settings().get("water_cost_rs_per_m3")
+    out = {"m3_per_day": round(m3_day), "week_m3": round(m3_day * 7), "month_m3": round(m3_day * 30),
+           "year_m3": round(m3_day * 365), "olympic_pools_per_year": round(m3_day * 365 / 2500, 1)}
+    if isinstance(cost, (int, float)) and cost > 0:
+        out["money"] = {"currency": report_settings().get("currency", "Rs"), "week": round(m3_day * 7 * cost),
+                        "month": round(m3_day * 30 * cost), "year": round(m3_day * 365 * cost)}
+    return out
+
+
+@router.get("/alerts/{aid}", dependencies=[Depends(STAFF_ONLY)])
+def alert_detail(aid: str):
+    a = ALERTS.get(aid)
+    if not a:
+        raise HTTPException(404, "Unknown alert")
+    s = score_alert(a)
+    c = refresh()
+    zone = a["zone"]
+    sensors = sorted(a.get("dp_mm", {}).items(), key=lambda kv: -kv[1])[:2]
+    used = [{"id": api.ZONES[zone]["inlet"], "type": "flow", "trust": meter_trust(api.ZONES[zone]["inlet"])}]
+    used += [{"id": sid, "type": "pressure", "trust": meter_trust(sid), "drop_mm": round(mm, 1)} for sid, mm in sensors]
+    fixes = Counter()
+    for u in used:
+        d = c["flow"].get(u["id"]) or c["pressure"].get(u["id"])
+        fixes.update(d["fixes"])
+    pressure = []
+    for sid, _ in sensors:
+        pressure.append({"id": sid, **series(c["pressure"][sid], 72, every=3)})
+    areas = []
+    for ar in (a.get("search") or {}).get("areas", []):
+        areas.append({**ar, "streets": streets_of(ar["pipes"])})
+    sensor_pos = []
+    for sid in api.ZONES[zone]["sensors"]:
+        lon, lat = NODE[sid]["geometry"]["coordinates"]
+        sensor_pos.append({"id": sid, "latlon": [lat, lon], "trust": meter_trust(sid),
+                           "drop_mm": round(a.get("dp_mm", {}).get(sid, 0), 1)})
+    linked = [report_view(REPORTS[x]) for x in a.get("reports", []) if x in REPORTS]
+    return {
+        **public_alert_view(a), "trace": s["trace"], "notes": s["notes"], "ruleset": s["ruleset"],
+        "bands": scoring.get(a.get("ruleset", RULESET))["bands"], "rejected": s["rejected"],
+        "ruleset_info": {"version": s["ruleset"], "active": RULESET,
+                         "description": scoring.get(a.get("ruleset", RULESET)).get("description"),
+                         "ai_cap": scoring.get(a.get("ruleset", RULESET))["caps"].get("ai_total")},
+        "flow": {k: v for k, v in s["flow"].items()}, "data_quality": {"meters": used, "fixes": dict(fixes)},
+        "pressure": pressure, "areas": areas, "sensors": sensor_pos, "reports": linked,
+        "model": {"leak_probability": (a.get("model") or {}).get("leak_probability"),
+                  "leak_flow_lps": (a.get("search") or {}).get("flow_lps"),
+                  "water_lost_m3_per_day": (a.get("search") or {}).get("m3_day"),
+                  "best_guess_latlon": (a.get("search") or {}).get("best_guess")},
+        "if_not_fixed": if_not_fixed((a.get("search") or {}).get("m3_day")) if a["status"] == "open" else None,
+        "suspects": (sp := suspects(a)), "households_est": households_near(zone, sp[:3]), "ease": repair_ease(sp),
+        "inlet": api.ZONES[zone]["inlet"],
+    }
+
+
+def usual(c, days):
+    """Median of the same time of day over the previous days (NaN where there is no history)."""
+    v = c["v"]
+    stack = []
+    for k in range(1, days + 1):
+        shifted = np.full(len(v), np.nan)
+        shifted[k * PER_DAY:] = v[:len(v) - k * PER_DAY]
+        stack.append(shifted)
+    with np.errstate(all="ignore"):
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return np.nanmedian(np.vstack(stack), axis=0)
+
+
+def suspect_check(a, sp=None):
+    """Demo only: where the simulated leak pipe sits in the suspect list (1 = first block)."""
+    pid = (a.get("truth") or {}).get("pipe_id")
+    if not pid:
+        return {}
+    for s in suspects(a, keep_all=True):
+        if pid in s["pipes"] or f"{pid}_LEAK_B" in s["pipes"]:
+            return {"true_pipe_suspect_rank": s["rank"]}
+    return {"true_pipe_suspect_rank": None}
+
+
+@router.get("/alerts/{aid}/replay", dependencies=[Depends(STAFF_ONLY)])
+def alert_replay(aid: str):
+    a = ALERTS.get(aid)
+    if not a:
+        raise HTTPException(404, "Unknown alert")
+    c = refresh()
+    zone = a["zone"]
+    start = a["started"]
+    if a["kind"] == "burst":
+        t0, t1 = start - 3 * 3600, min(NOW, (a.get("resolved") or NOW) + 2 * 3600)
+    else:
+        t0, t1 = start - 24 * 3600, NOW
+    t1 = max(t1, t0 + 6 * 3600)
+    fc = c["flow"][api.ZONES[zone]["inlet"]]
+    sel = (fc["t"] >= t0) & (fc["t"] <= t1)
+    every = max(1, int(sel.sum() // 240))
+    extra = fc["v"] - usual(fc, 7)
+    flow = {"t": fc["t"][sel][::every].tolist(),
+            "v": [None if np.isnan(x) else round(float(x), 2) for x in extra[sel][::every]]}
+    top_sensor = max(a.get("dp_mm", {"": 0}).items(), key=lambda kv: kv[1])[0] if a.get("dp_mm") else None
+    pres = None
+    if top_sensor and top_sensor in c["pressure"]:
+        pc = c["pressure"][top_sensor]
+        ps = (pc["t"] >= t0) & (pc["t"] <= t1)
+        drop = usual(pc, 2) - pc["v"]
+        pres = {"id": top_sensor, "t": pc["t"][ps][::every].tolist(),
+                "v": [None if np.isnan(x) else round(float(x), 3) for x in drop[ps][::every]]}
+    s = score_alert(a)
+    ev = []
+    if a["kind"] != "public":
+        ev.append({"t": start, "tag": "Sensor", "title": "Leak starts" if a["kind"] == "slow" else "Pressure drops fast while flow jumps",
+                   "detail": (f"Inlet {api.ZONES[zone]['inlet']} starts reading above normal."
+                              if a["kind"] == "slow" else
+                              f"Flow jumps by about {(a.get('search') or {}).get('flow_lps') or '?'} L/s. This shape is typical of a burst main.")})
+        codes = ", ".join(x["code"] for x in s["trace"] if x["source"] in ("Rules", "Combo"))
+        ev.append({"t": a["created"], "tag": "Rules", "title": "Rules raise an alert",
+                   "detail": f"Signals {codes}. Score {s['score']}/100, {s['level']}."})
+        srch = a.get("search") or {}
+        top = (srch.get("areas") or [None])[0]
+        st = ", ".join(a.get("streets", [])[:2]) or "the zone"
+        if top and srch.get("source") == "model":
+            ev.append({"t": a["created"] + 60, "tag": "AI model", "title": "Model suggests where to look",
+                       "detail": f"Area {top['area']} ({top['probability']:.0%}), around {st}. About {srch.get('flow_lps')} L/s lost."})
+        elif top:
+            ev.append({"t": a["created"] + 60, "tag": "Rules", "title": "Search area from the pressure sensors",
+                       "detail": f"Model {'switched off' if a.get('model_status') == 'off' else 'not available'}. "
+                                 f"Area around sensors {', '.join(top.get('from_sensors', []))}, near {st}. "
+                                 f"About {srch.get('flow_lps')} L/s extra at the inlet meter."})
+    for code in a.get("reports", []):
+        r = REPORTS.get(code)
+        if r:
+            ev.append({"t": r["created"], "tag": "Public", "title": f"Public report {r['code']}",
+                       "detail": f"{REPORT_KINDS[r['kind']][1]}, sent from the public page."})
+    j = JOBS.get(a.get("job")) if a.get("job") else None
+    if j:
+        ev.append({"t": j["created"], "tag": "Crew", "title": f"{CREWS[j['crew_id']]['name']} sent",
+                   "detail": "Job sent to the crew phone."})
+        if j.get("finished"):
+            ev.append({"t": j["finished"], "tag": "Crew", "title": "Crew logs the result",
+                       "detail": f"{OUTCOMES[j['outcome']]}" + (f": {j.get('cause')}" if j.get("cause") else "") + "."})
+    ev.sort(key=lambda e: e["t"])
+    for i, e in enumerate(ev):
+        e["n"] = i + 1
+    return {**public_alert_view(a), "events": ev, "flow": flow, "pressure": pres, "window": [t0, t1]}
+
+
+class DispatchIn(BaseModel):
+    crew_id: Literal["C1", "C2", "C3"]
+    note: Optional[str] = None
+
+
+@router.post("/alerts/{aid}/dispatch")
+def dispatch(aid: str, body: DispatchIn, user=Depends(OPS_ONLY)):
+    with LOCK:
+        a = ALERTS.get(aid)
+        if not a or a["status"] != "open":
+            raise HTTPException(404, "No open alert with this id")
+        old = JOBS.get(a.get("job")) if a.get("job") else None
+        if old and old["status"] != "done":
+            old["status"] = "cancelled"
+        jid = f"J-{1040 + len(JOBS) + 1}"
+        JOBS[jid] = {"id": jid, "alert": aid, "crew_id": body.crew_id, "status": "sent",
+                     "created": int(time.time()), "note": body.note, "by": user["name"]}
+        a["job"] = jid
+        return JOBS[jid]
+
+
+@router.post("/alerts/{aid}/dismiss")
+def dismiss(aid: str, user=Depends(OPS_ONLY)):
+    a = ALERTS.get(aid)
+    if not a:
+        raise HTTPException(404, "Unknown alert")
+    a["status"] = "resolved"
+    a["resolved"] = int(time.time())
+    LABELS.append({"id": f"L-{len(LABELS) + 1}", "alert": aid, "zone": a["zone"], "label": "not_a_leak",
+                   "by": user["name"], "at": a["resolved"]})
+    return public_alert_view(a)
+
+
+def meter_list():
+    c = refresh()
+    out = []
+    for mid, m in METERS.items():
+        d = c["flow"].get(mid) or c["pressure"].get(mid)
+        issues = ", ".join(f"{n} {code}" for code, n in sorted(d["fixes"].items()))
+        out.append({"id": mid, "zone": m["zone"], "zone_name": ZONE_NAMES[m["zone"]], "type": m["type"],
+                    "status": d["status"], "trust": d["trust"], "fixes": d["fixes"], "issues": issues,
+                    "used": "yes" if d["trust"] >= 80 else "half" if d["trust"] >= 50 else "no",
+                    "problem": describe_problem(d)})
+    return out
+
+
+def describe_problem(d):
+    f = d["fixes"]
+    if d["status"] == "offline":
+        return "No readings for over 30 min (offline)"
+    if d["status"] == "stuck":
+        return "Same value for hours (stuck)"
+    if d["status"] == "drifting":
+        return f"Reads {d['drift_pct']:+.0f}% against what it should"
+    parts = []
+    if f.get("DQ-01"):
+        parts.append(f"{f['DQ-01']} spikes")
+    if f.get("DQ-02"):
+        parts.append(f"{f['DQ-02'] * 5} min of gaps filled")
+    if f.get("DQ-04"):
+        parts.append(f"{f['DQ-04']} impossible values")
+    if f.get("DQ-06"):
+        parts.append(f"{f['DQ-06']} time problems")
+    return ", ".join(parts) or "No problems"
+
+
+@router.get("/meters", dependencies=[Depends(STAFF_ONLY)])
+def meters_endpoint():
+    ms = meter_list()
+    st = Counter(m["status"] for m in ms)
+    fixed = sum(sum(m["fixes"].values()) for m in ms)
+    return {"meters": sorted(ms, key=lambda m: (m["trust"], m["id"])), "rules": DQ_RULES,
+            "summary": {"total": len(ms), "healthy": st["healthy"], "noisy": st["noisy"] + st["drifting"],
+                        "offline": st["offline"] + st["stuck"], "fixed": fixed}}
+
+
+@router.get("/meters/{mid}", dependencies=[Depends(STAFF_ONLY)])
+def meter_detail(mid: str, hours: int = 24):
+    if mid not in METERS:
+        raise HTTPException(404, "Unknown meter")
+    c = refresh()
+    d = c["flow"].get(mid) or c["pressure"].get(mid)
+    m = METERS[mid]
+    lon, lat = (NODE[mid]["geometry"]["coordinates"] if mid in NODE else (None, None))
+    hours = max(6, min(hours, 72))
+    return {**m, "zone_name": ZONE_NAMES[m["zone"]], "status": d["status"], "trust": d["trust"],
+            "fixes": d["fixes"], "events": d["events"], "problem": describe_problem(d),
+            "expected_per_day": PER_DAY, "latlon": [lat, lon] if lat else None,
+            "series": series(d, hours, every=1)}
+
+
+def report_view(r):
+    return {"code": r["code"], "created": r["created"], "lat": r["lat"], "lon": r["lon"], "kind": r["kind"],
+            "kind_kreol": REPORT_KINDS[r["kind"]][0], "kind_en": REPORT_KINDS[r["kind"]][1],
+            "zone": r["zone"], "zone_name": ZONE_NAMES.get(r["zone"], "Outside network") if r["zone"] else "Outside network",
+            "note": r["note"], "has_photo": bool(r["photo"]), "alert": r["alert"],
+            "status": report_state(r)}
+
+
+def report_state(r):
+    a = ALERTS.get(r["alert"]) if r["alert"] else None
+    if not a:
+        return "new"
+    if a["status"] == "resolved":
+        return "fixed"
+    return "linked" if a["kind"] != "public" else "cluster"
+
+
+@router.get("/reports", dependencies=[Depends(STAFF_ONLY)])
+def reports_list():
+    items = sorted((report_view(r) for r in REPORTS.values()), key=lambda r: -r["created"])
+    clusters = []
+    for a in ALERTS.values():
+        if not a.get("reports") or a["status"] != "open":
+            continue
+        rs = [REPORTS[c] for c in a["reports"] if c in REPORTS]
+        clusters.append({"alert": a["id"], "kind": a["kind"], "zone": a["zone"], "zone_name": ZONE_NAMES.get(a["zone"]),
+                         "count": len(rs), "devices": len({r["device"] for r in rs}),
+                         "street": (a.get("streets") or [None])[0],
+                         "minutes": round((max(r["created"] for r in rs) - min(r["created"] for r in rs)) / 60),
+                         "score": score_alert(a)["score"]})
+    return {"reports": items, "clusters": clusters}
+
+
+@router.get("/reports/{code}/photo", dependencies=[Depends(STAFF_ONLY)])
+def report_photo(code: str):
+    r = REPORTS.get(code)
+    if not r or not r["photo"]:
+        raise HTTPException(404, "No photo")
+    return {"photo": r["photo"]}
+
+
+@router.get("/crews", dependencies=[Depends(STAFF_ONLY)])
+def crews():
+    out = []
+    for c in CREWS.values():
+        active = [j for j in JOBS.values() if j["crew_id"] == c["id"] and j["status"] in ("sent", "on_the_way", "on_site")]
+        out.append({**c, "state": "busy" if active else "available",
+                    "detail": job_line(active[0]) if active else c["base"]})
+    jobs = sorted(JOBS.values(), key=lambda j: -j["created"])
+    return {"crews": out, "jobs": [job_view(j) for j in jobs], "labels": LABELS[-20:][::-1]}
+
+
+def job_line(j):
+    a = ALERTS[j["alert"]]
+    return f"Job {j['id']}, {zone_label(a['zone'])}"
+
+
+OUTCOMES = {"leak_found": "Leak found and fixed", "no_leak": "No leak found",
+            "meter_fault": "Meter fault", "planned_works": "Planned works"}
+
+
+def job_view(j):
+    a = ALERTS[j["alert"]]
+    s = score_alert(a)
+    srch = a.get("search") or {}
+    top = (srch.get("areas") or [None])[0]
+    lat_lon = srch.get("best_guess") or a.get("latlon")
+    return {
+        "id": j["id"], "alert": a["id"], "zone": a["zone"], "zone_name": ZONE_NAMES.get(a["zone"]),
+        "crew_id": j["crew_id"], "crew": CREWS[j["crew_id"]]["name"], "status": j["status"],
+        "created": j["created"], "finished": j.get("finished"), "outcome": j.get("outcome"),
+        "outcome_text": OUTCOMES.get(j.get("outcome")), "cause": j.get("cause"), "notes": j.get("notes"),
+        "score": s["score"], "level": s["level"], "why": headline(a, s),
+        "reasons": [x["finding"] for x in s["trace"] if x["source"] in ("Rules", "Public")][:3],
+        "streets": a.get("streets", []), "latlon": lat_lon,
+        "search_radius_m": round(top["radius_m"]) if top else None,
+        "suspects": suspects(a),
+        "pipes": top["pipes"] if top else [],
+    }
+
+
