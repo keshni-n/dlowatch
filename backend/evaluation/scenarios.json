@@ -7,14 +7,18 @@
    "size": "small",
    "age_h": 45.2,
    "leak_lps": 0.81,
-   "detected": true,
+   "detected": false,
    "model": "ok",
-   "score": 27,
-   "level": "watch",
-   "error_m": 2296,
-   "in_search": false,
-   "suspect_rank": null,
-   "size_error_pct": 8.7
+   "nearest_logger_m": 210,
+   "in_hearing_range": true,
+   "before": {
+    "detected": false,
+    "score": null,
+    "level": null,
+    "error_m": null,
+    "in_search": null,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z1",
@@ -25,31 +29,46 @@
    "leak_lps": 4.92,
    "detected": true,
    "model": "ok",
-   "score": 81,
+   "nearest_logger_m": 319,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 75,
    "level": "critical",
    "error_m": 498,
    "in_search": true,
    "suspect_rank": 4,
-   "size_error_pct": 2.9
+   "size_error_pct": 2.9,
+   "before": {
+    "detected": true,
+    "score": 75,
+    "level": "critical",
+    "error_m": 498,
+    "in_search": true,
+    "suspect_rank": 4
+   }
   },
   {
    "zone": "Z1",
    "kind": "normal",
    "fault": null,
-   "score": 0,
+   "score": 12,
    "level": "low",
    "false_alarm": false,
-   "signals": []
+   "signals": [
+    "WB-01"
+   ]
   },
   {
    "zone": "Z1",
    "kind": "faulty",
    "fault": "gaps",
-   "score": 12,
-   "level": "low",
-   "false_alarm": false,
+   "score": 32,
+   "level": "watch",
+   "false_alarm": true,
    "signals": [
-    "PR-01"
+    "WB-01",
+    "PR-01",
+    "IX-1"
    ]
   },
   {
@@ -61,12 +80,23 @@
    "leak_lps": 2.14,
    "detected": true,
    "model": "ok",
-   "score": 33,
-   "level": "watch",
-   "error_m": 166,
+   "nearest_logger_m": 66,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 75,
+   "level": "critical",
+   "error_m": 66,
    "in_search": true,
-   "suspect_rank": 3,
-   "size_error_pct": 8.4
+   "suspect_rank": 2,
+   "size_error_pct": 8.4,
+   "before": {
+    "detected": true,
+    "score": 53,
+    "level": "high",
+    "error_m": 166,
+    "in_search": true,
+    "suspect_rank": 3
+   }
   },
   {
    "zone": "Z1",
@@ -77,12 +107,23 @@
    "leak_lps": 5.15,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 261,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 81,
    "level": "critical",
    "error_m": 421,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 0.2
+   "size_error_pct": 0.2,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 421,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z1",
@@ -111,12 +152,23 @@
    "leak_lps": 2.22,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 105,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 27,
    "level": "watch",
    "error_m": 702,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 0.8
+   "size_error_pct": 0.8,
+   "before": {
+    "detected": true,
+    "score": 27,
+    "level": "watch",
+    "error_m": 702,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z1",
@@ -127,23 +179,32 @@
    "leak_lps": 5.37,
    "detected": true,
    "model": "ok",
-   "score": 75,
+   "nearest_logger_m": 234,
+   "in_hearing_range": true,
+   "noise_heard": false,
+   "score": 81,
    "level": "critical",
    "error_m": 365,
    "in_search": true,
    "suspect_rank": 2,
-   "size_error_pct": 1.1
+   "size_error_pct": 1.1,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 365,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z1",
    "kind": "normal",
    "fault": null,
-   "score": 12,
+   "score": 0,
    "level": "low",
    "false_alarm": false,
-   "signals": [
-    "WB-01"
-   ]
+   "signals": []
   },
   {
    "zone": "Z1",
@@ -165,12 +226,23 @@
    "leak_lps": 2.1,
    "detected": true,
    "model": "ok",
-   "score": 53,
-   "level": "high",
+   "nearest_logger_m": 245,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 79,
+   "level": "critical",
    "error_m": 971,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 1.1
+   "size_error_pct": 1.1,
+   "before": {
+    "detected": true,
+    "score": 63,
+    "level": "high",
+    "error_m": 971,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z1",
@@ -181,12 +253,23 @@
    "leak_lps": 5.34,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 177,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 170,
    "in_search": true,
    "suspect_rank": 2,
-   "size_error_pct": 2.9
+   "size_error_pct": 2.9,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 170,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z1",
@@ -217,12 +300,23 @@
    "leak_lps": 2.4,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 34,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 33,
    "level": "watch",
    "error_m": 533,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 2.0
+   "size_error_pct": 2.0,
+   "before": {
+    "detected": true,
+    "score": 33,
+    "level": "watch",
+    "error_m": 533,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z1",
@@ -233,12 +327,23 @@
    "leak_lps": 4.71,
    "detected": true,
    "model": "ok",
-   "score": 70,
+   "nearest_logger_m": 158,
+   "in_hearing_range": true,
+   "noise_heard": false,
+   "score": 75,
    "level": "critical",
    "error_m": 793,
    "in_search": true,
    "suspect_rank": 5,
-   "size_error_pct": 6.9
+   "size_error_pct": 6.9,
+   "before": {
+    "detected": true,
+    "score": 75,
+    "level": "critical",
+    "error_m": 793,
+    "in_search": true,
+    "suspect_rank": 5
+   }
   },
   {
    "zone": "Z1",
@@ -255,11 +360,13 @@
    "zone": "Z1",
    "kind": "faulty",
    "fault": "reset",
-   "score": 12,
-   "level": "low",
-   "false_alarm": false,
+   "score": 32,
+   "level": "watch",
+   "false_alarm": true,
    "signals": [
-    "PR-01"
+    "WB-01",
+    "PR-01",
+    "IX-1"
    ]
   },
   {
@@ -271,12 +378,23 @@
    "leak_lps": 2.29,
    "detected": true,
    "model": "ok",
-   "score": 63,
+   "nearest_logger_m": 366,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 53,
    "level": "high",
    "error_m": 991,
    "in_search": true,
-   "suspect_rank": null,
-   "size_error_pct": 0.4
+   "suspect_rank": 5,
+   "size_error_pct": 0.4,
+   "before": {
+    "detected": true,
+    "score": 53,
+    "level": "high",
+    "error_m": 991,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z1",
@@ -287,12 +405,23 @@
    "leak_lps": 5.49,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 72,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 648,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 4.5
+   "size_error_pct": 4.5,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 648,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z1",
@@ -323,12 +452,23 @@
    "leak_lps": 2.5,
    "detected": true,
    "model": "ok",
-   "score": 68,
-   "level": "high",
-   "error_m": 240,
+   "nearest_logger_m": 172,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 74,
+   "level": "critical",
+   "error_m": 172,
    "in_search": true,
-   "suspect_rank": 4,
-   "size_error_pct": 1.9
+   "suspect_rank": 1,
+   "size_error_pct": 1.9,
+   "before": {
+    "detected": true,
+    "score": 58,
+    "level": "high",
+    "error_m": 240,
+    "in_search": true,
+    "suspect_rank": 4
+   }
   },
   {
    "zone": "Z1",
@@ -339,23 +479,32 @@
    "leak_lps": 5.33,
    "detected": true,
    "model": "ok",
-   "score": 81,
+   "nearest_logger_m": 371,
+   "in_hearing_range": false,
+   "noise_heard": true,
+   "score": 97,
    "level": "critical",
    "error_m": 575,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 2.0
+   "size_error_pct": 2.0,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 575,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z1",
    "kind": "normal",
    "fault": null,
-   "score": 12,
+   "score": 0,
    "level": "low",
    "false_alarm": false,
-   "signals": [
-    "WB-01"
-   ]
+   "signals": []
   },
   {
    "zone": "Z1",
@@ -373,8 +522,25 @@
    "size": "medium",
    "age_h": 70.7,
    "leak_lps": 2.11,
-   "detected": false,
-   "model": "ok"
+   "detected": true,
+   "model": "ok",
+   "nearest_logger_m": 85,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 59,
+   "level": "high",
+   "error_m": 85,
+   "in_search": true,
+   "suspect_rank": 3,
+   "size_error_pct": 0.1,
+   "before": {
+    "detected": true,
+    "score": 37,
+    "level": "watch",
+    "error_m": 384,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z1",
@@ -385,12 +551,23 @@
    "leak_lps": 4.91,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 117,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 81,
    "level": "critical",
    "error_m": 246,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 2.3
+   "size_error_pct": 2.3,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 246,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z1",
@@ -405,12 +582,10 @@
    "zone": "Z1",
    "kind": "faulty",
    "fault": "spikes",
-   "score": 12,
+   "score": 0,
    "level": "low",
    "false_alarm": false,
-   "signals": [
-    "WB-01"
-   ]
+   "signals": []
   },
   {
    "zone": "Z1",
@@ -445,12 +620,23 @@
    "leak_lps": 3.09,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 93,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 53,
    "level": "high",
    "error_m": 372,
    "in_search": true,
    "suspect_rank": 5,
-   "size_error_pct": 2.1
+   "size_error_pct": 2.1,
+   "before": {
+    "detected": true,
+    "score": 53,
+    "level": "high",
+    "error_m": 372,
+    "in_search": true,
+    "suspect_rank": 5
+   }
   },
   {
    "zone": "Z2",
@@ -461,12 +647,23 @@
    "leak_lps": 6.24,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 316,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 25,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 4.0
+   "size_error_pct": 4.0,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 25,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z2",
@@ -497,12 +694,23 @@
    "leak_lps": 1.07,
    "detected": true,
    "model": "ok",
-   "score": 47,
+   "nearest_logger_m": 67,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 63,
    "level": "high",
-   "error_m": 896,
-   "in_search": false,
-   "suspect_rank": null,
-   "size_error_pct": 3.5
+   "error_m": 67,
+   "in_search": true,
+   "suspect_rank": 1,
+   "size_error_pct": 3.5,
+   "before": {
+    "detected": true,
+    "score": 47,
+    "level": "high",
+    "error_m": 896,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z2",
@@ -513,22 +721,35 @@
    "leak_lps": 6.75,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 430,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 477,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 3.0
+   "size_error_pct": 3.0,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 477,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z2",
    "kind": "normal",
    "fault": null,
-   "score": 12,
-   "level": "low",
-   "false_alarm": false,
+   "score": 32,
+   "level": "watch",
+   "false_alarm": true,
    "signals": [
-    "PR-01"
+    "WB-01",
+    "PR-01",
+    "IX-1"
    ]
   },
   {
@@ -549,12 +770,23 @@
    "leak_lps": 1.06,
    "detected": true,
    "model": "ok",
-   "score": 63,
-   "level": "high",
-   "error_m": 428,
+   "nearest_logger_m": 42,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 43,
+   "level": "watch",
+   "error_m": 42,
    "in_search": true,
-   "suspect_rank": null,
-   "size_error_pct": 3.1
+   "suspect_rank": 3,
+   "size_error_pct": 3.1,
+   "before": {
+    "detected": true,
+    "score": 33,
+    "level": "watch",
+    "error_m": 428,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z2",
@@ -565,23 +797,32 @@
    "leak_lps": 6.37,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 482,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 431,
    "in_search": true,
    "suspect_rank": 3,
-   "size_error_pct": 0.7
+   "size_error_pct": 0.7,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 431,
+    "in_search": true,
+    "suspect_rank": 3
+   }
   },
   {
    "zone": "Z2",
    "kind": "normal",
    "fault": null,
-   "score": 12,
+   "score": 0,
    "level": "low",
    "false_alarm": false,
-   "signals": [
-    "WB-01"
-   ]
+   "signals": []
   },
   {
    "zone": "Z2",
@@ -601,12 +842,23 @@
    "leak_lps": 1.02,
    "detected": true,
    "model": "ok",
-   "score": 47,
-   "level": "high",
+   "nearest_logger_m": 355,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 27,
+   "level": "watch",
    "error_m": 524,
    "in_search": true,
    "suspect_rank": 3,
-   "size_error_pct": 2.4
+   "size_error_pct": 2.4,
+   "before": {
+    "detected": true,
+    "score": 27,
+    "level": "watch",
+    "error_m": 524,
+    "in_search": true,
+    "suspect_rank": 3
+   }
   },
   {
    "zone": "Z2",
@@ -617,32 +869,43 @@
    "leak_lps": 5.99,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 336,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 81,
    "level": "critical",
    "error_m": 299,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 1.7
+   "size_error_pct": 1.7,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 299,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z2",
    "kind": "normal",
    "fault": null,
+   "score": 0,
+   "level": "low",
+   "false_alarm": false,
+   "signals": []
+  },
+  {
+   "zone": "Z2",
+   "kind": "faulty",
+   "fault": "stuck",
    "score": 12,
    "level": "low",
    "false_alarm": false,
    "signals": [
     "WB-01"
    ]
-  },
-  {
-   "zone": "Z2",
-   "kind": "faulty",
-   "fault": "stuck",
-   "score": 0,
-   "level": "low",
-   "false_alarm": false,
-   "signals": []
   },
   {
    "zone": "Z2",
@@ -653,12 +916,23 @@
    "leak_lps": 2.67,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 254,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 53,
    "level": "high",
    "error_m": 379,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 2.6
+   "size_error_pct": 2.6,
+   "before": {
+    "detected": true,
+    "score": 53,
+    "level": "high",
+    "error_m": 379,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z2",
@@ -669,12 +943,23 @@
    "leak_lps": 6.3,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 235,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 106,
    "in_search": true,
    "suspect_rank": 2,
-   "size_error_pct": 0.4
+   "size_error_pct": 0.4,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 106,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z2",
@@ -689,10 +974,12 @@
    "zone": "Z2",
    "kind": "faulty",
    "fault": "stuck",
-   "score": 0,
+   "score": 12,
    "level": "low",
    "false_alarm": false,
-   "signals": []
+   "signals": [
+    "WB-01"
+   ]
   },
   {
    "zone": "Z2",
@@ -703,12 +990,23 @@
    "leak_lps": 0.97,
    "detected": true,
    "model": "ok",
-   "score": 47,
-   "level": "high",
+   "nearest_logger_m": 221,
+   "in_hearing_range": true,
+   "noise_heard": false,
+   "score": 27,
+   "level": "watch",
    "error_m": 308,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 3.5
+   "size_error_pct": 3.5,
+   "before": {
+    "detected": true,
+    "score": 27,
+    "level": "watch",
+    "error_m": 308,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z2",
@@ -719,12 +1017,23 @@
    "leak_lps": 6.01,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 176,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 17,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 2.1
+   "size_error_pct": 2.1,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 17,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z2",
@@ -753,12 +1062,23 @@
    "leak_lps": 2.89,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 281,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 68,
    "level": "high",
    "error_m": 447,
    "in_search": true,
    "suspect_rank": 2,
-   "size_error_pct": 1.2
+   "size_error_pct": 1.2,
+   "before": {
+    "detected": true,
+    "score": 68,
+    "level": "high",
+    "error_m": 447,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z2",
@@ -769,12 +1089,23 @@
    "leak_lps": 5.42,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 508,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 81,
    "level": "critical",
    "error_m": 203,
    "in_search": true,
    "suspect_rank": 3,
-   "size_error_pct": 0.8
+   "size_error_pct": 0.8,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 203,
+    "in_search": true,
+    "suspect_rank": 3
+   }
   },
   {
    "zone": "Z2",
@@ -789,12 +1120,10 @@
    "zone": "Z2",
    "kind": "faulty",
    "fault": "drift",
-   "score": 12,
+   "score": 0,
    "level": "low",
    "false_alarm": false,
-   "signals": [
-    "WB-01"
-   ]
+   "signals": []
   },
   {
    "zone": "Z2",
@@ -805,12 +1134,23 @@
    "leak_lps": 2.74,
    "detected": true,
    "model": "ok",
-   "score": 53,
+   "nearest_logger_m": 166,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 69,
    "level": "high",
-   "error_m": 265,
+   "error_m": 166,
    "in_search": true,
-   "suspect_rank": 2,
-   "size_error_pct": 0.8
+   "suspect_rank": 1,
+   "size_error_pct": 0.8,
+   "before": {
+    "detected": true,
+    "score": 53,
+    "level": "high",
+    "error_m": 265,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z2",
@@ -821,12 +1161,23 @@
    "leak_lps": 5.88,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 367,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 136,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 1.8
+   "size_error_pct": 1.8,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 136,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z2",
@@ -881,12 +1232,23 @@
    "leak_lps": 1.0,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 324,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 27,
    "level": "watch",
    "error_m": 739,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 1.0
+   "size_error_pct": 1.0,
+   "before": {
+    "detected": true,
+    "score": 27,
+    "level": "watch",
+    "error_m": 739,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z3",
@@ -897,12 +1259,23 @@
    "leak_lps": 4.84,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 267,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 81,
    "level": "critical",
    "error_m": 1613,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 0.3
+   "size_error_pct": 0.3,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 1613,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z3",
@@ -933,12 +1306,23 @@
    "leak_lps": 0.84,
    "detected": true,
    "model": "ok",
-   "score": 27,
+   "nearest_logger_m": 171,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 37,
    "level": "watch",
-   "error_m": 930,
+   "error_m": 171,
    "in_search": true,
-   "suspect_rank": null,
-   "size_error_pct": 3.5
+   "suspect_rank": 4,
+   "size_error_pct": 3.5,
+   "before": {
+    "detected": true,
+    "score": 27,
+    "level": "watch",
+    "error_m": 930,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z3",
@@ -949,12 +1333,23 @@
    "leak_lps": 4.9,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 241,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 80,
    "level": "critical",
    "error_m": 610,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 5.1
+   "size_error_pct": 5.1,
+   "before": {
+    "detected": true,
+    "score": 80,
+    "level": "critical",
+    "error_m": 610,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z3",
@@ -983,12 +1378,23 @@
    "leak_lps": 2.22,
    "detected": true,
    "model": "ok",
-   "score": 70,
+   "nearest_logger_m": 201,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 78,
    "level": "critical",
-   "error_m": 336,
+   "error_m": 201,
    "in_search": true,
-   "suspect_rank": null,
-   "size_error_pct": 1.6
+   "suspect_rank": 5,
+   "size_error_pct": 1.6,
+   "before": {
+    "detected": true,
+    "score": 62,
+    "level": "high",
+    "error_m": 336,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z3",
@@ -999,12 +1405,23 @@
    "leak_lps": 5.06,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 75,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 221,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 5.5
+   "size_error_pct": 5.5,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 221,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z3",
@@ -1031,14 +1448,18 @@
    "size": "small",
    "age_h": 73.8,
    "leak_lps": 0.83,
-   "detected": true,
+   "detected": false,
    "model": "ok",
-   "score": 27,
-   "level": "watch",
-   "error_m": 670,
-   "in_search": true,
-   "suspect_rank": null,
-   "size_error_pct": 3.7
+   "nearest_logger_m": 297,
+   "in_hearing_range": true,
+   "before": {
+    "detected": false,
+    "score": null,
+    "level": null,
+    "error_m": null,
+    "in_search": null,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z3",
@@ -1049,12 +1470,23 @@
    "leak_lps": 6.35,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 205,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 85,
    "in_search": true,
    "suspect_rank": 2,
-   "size_error_pct": 1.4
+   "size_error_pct": 1.4,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 85,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z3",
@@ -1085,12 +1517,23 @@
    "leak_lps": 2.65,
    "detected": true,
    "model": "ok",
-   "score": 68,
-   "level": "high",
-   "error_m": 153,
+   "nearest_logger_m": 98,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 84,
+   "level": "critical",
+   "error_m": 98,
    "in_search": true,
-   "suspect_rank": 2,
-   "size_error_pct": 0.5
+   "suspect_rank": 1,
+   "size_error_pct": 0.5,
+   "before": {
+    "detected": true,
+    "score": 68,
+    "level": "high",
+    "error_m": 153,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z3",
@@ -1101,12 +1544,23 @@
    "leak_lps": 5.09,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 203,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 81,
    "level": "critical",
    "error_m": 396,
    "in_search": true,
    "suspect_rank": 4,
-   "size_error_pct": 6.2
+   "size_error_pct": 6.2,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 396,
+    "in_search": true,
+    "suspect_rank": 4
+   }
   },
   {
    "zone": "Z3",
@@ -1139,12 +1593,23 @@
    "leak_lps": 0.97,
    "detected": true,
    "model": "ok",
-   "score": 52,
-   "level": "high",
+   "nearest_logger_m": 278,
+   "in_hearing_range": true,
+   "noise_heard": false,
+   "score": 32,
+   "level": "watch",
    "error_m": 190,
    "in_search": true,
    "suspect_rank": 5,
-   "size_error_pct": 0.1
+   "size_error_pct": 0.1,
+   "before": {
+    "detected": true,
+    "score": 32,
+    "level": "watch",
+    "error_m": 190,
+    "in_search": true,
+    "suspect_rank": 5
+   }
   },
   {
    "zone": "Z3",
@@ -1155,12 +1620,23 @@
    "leak_lps": 5.17,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 279,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 207,
    "in_search": true,
    "suspect_rank": 4,
-   "size_error_pct": 0.1
+   "size_error_pct": 0.1,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 207,
+    "in_search": true,
+    "suspect_rank": 4
+   }
   },
   {
    "zone": "Z3",
@@ -1189,12 +1665,23 @@
    "leak_lps": 2.91,
    "detected": true,
    "model": "ok",
-   "score": 58,
+   "nearest_logger_m": 205,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 48,
    "level": "high",
-   "error_m": 513,
+   "error_m": 205,
    "in_search": true,
-   "suspect_rank": null,
-   "size_error_pct": 0.3
+   "suspect_rank": 5,
+   "size_error_pct": 0.3,
+   "before": {
+    "detected": true,
+    "score": 38,
+    "level": "watch",
+    "error_m": 513,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z3",
@@ -1205,12 +1692,23 @@
    "leak_lps": 5.06,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 498,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 333,
    "in_search": true,
    "suspect_rank": 5,
-   "size_error_pct": 3.5
+   "size_error_pct": 3.5,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 333,
+    "in_search": true,
+    "suspect_rank": 5
+   }
   },
   {
    "zone": "Z3",
@@ -1241,12 +1739,23 @@
    "leak_lps": 2.3,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 455,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 68,
    "level": "high",
    "error_m": 347,
    "in_search": true,
    "suspect_rank": 2,
-   "size_error_pct": 4.5
+   "size_error_pct": 4.5,
+   "before": {
+    "detected": true,
+    "score": 68,
+    "level": "high",
+    "error_m": 347,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z3",
@@ -1257,12 +1766,23 @@
    "leak_lps": 5.84,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 472,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 417,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 0.6
+   "size_error_pct": 0.6,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 417,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z3",
@@ -1319,12 +1839,23 @@
    "leak_lps": 0.95,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 239,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 57,
    "level": "high",
    "error_m": 1185,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 5.3
+   "size_error_pct": 5.3,
+   "before": {
+    "detected": true,
+    "score": 57,
+    "level": "high",
+    "error_m": 1185,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z4",
@@ -1335,12 +1866,23 @@
    "leak_lps": 6.9,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 177,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 81,
    "level": "critical",
    "error_m": 634,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 1.9
+   "size_error_pct": 1.9,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 634,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z4",
@@ -1355,60 +1897,6 @@
    "zone": "Z4",
    "kind": "faulty",
    "fault": "spikes",
-   "score": 12,
-   "level": "low",
-   "false_alarm": false,
-   "signals": [
-    "PR-01"
-   ]
-  },
-  {
-   "zone": "Z4",
-   "kind": "slow",
-   "pipe": "P_12268",
-   "size": "small",
-   "age_h": 57.7,
-   "leak_lps": 1.07,
-   "detected": true,
-   "model": "ok",
-   "score": 33,
-   "level": "watch",
-   "error_m": 320,
-   "in_search": true,
-   "suspect_rank": 3,
-   "size_error_pct": 3.3
-  },
-  {
-   "zone": "Z4",
-   "kind": "burst",
-   "pipe": "P_11226",
-   "size": "large",
-   "age_h": 3.7,
-   "leak_lps": 6.74,
-   "detected": true,
-   "model": "ok",
-   "score": 81,
-   "level": "critical",
-   "error_m": 780,
-   "in_search": true,
-   "suspect_rank": null,
-   "size_error_pct": 0.5
-  },
-  {
-   "zone": "Z4",
-   "kind": "normal",
-   "fault": null,
-   "score": 12,
-   "level": "low",
-   "false_alarm": false,
-   "signals": [
-    "WB-01"
-   ]
-  },
-  {
-   "zone": "Z4",
-   "kind": "faulty",
-   "fault": "gaps",
    "score": 32,
    "level": "watch",
    "false_alarm": true,
@@ -1421,18 +1909,103 @@
   {
    "zone": "Z4",
    "kind": "slow",
+   "pipe": "P_12268",
+   "size": "small",
+   "age_h": 57.7,
+   "leak_lps": 1.07,
+   "detected": true,
+   "model": "ok",
+   "nearest_logger_m": 447,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 63,
+   "level": "high",
+   "error_m": 320,
+   "in_search": true,
+   "suspect_rank": 3,
+   "size_error_pct": 3.3,
+   "before": {
+    "detected": true,
+    "score": 63,
+    "level": "high",
+    "error_m": 320,
+    "in_search": true,
+    "suspect_rank": 3
+   }
+  },
+  {
+   "zone": "Z4",
+   "kind": "burst",
+   "pipe": "P_11226",
+   "size": "large",
+   "age_h": 3.7,
+   "leak_lps": 6.74,
+   "detected": true,
+   "model": "ok",
+   "nearest_logger_m": 86,
+   "in_hearing_range": true,
+   "noise_heard": false,
+   "score": 81,
+   "level": "critical",
+   "error_m": 780,
+   "in_search": true,
+   "suspect_rank": null,
+   "size_error_pct": 0.5,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 780,
+    "in_search": true,
+    "suspect_rank": null
+   }
+  },
+  {
+   "zone": "Z4",
+   "kind": "normal",
+   "fault": null,
+   "score": 0,
+   "level": "low",
+   "false_alarm": false,
+   "signals": []
+  },
+  {
+   "zone": "Z4",
+   "kind": "faulty",
+   "fault": "gaps",
+   "score": 12,
+   "level": "low",
+   "false_alarm": false,
+   "signals": [
+    "PR-01"
+   ]
+  },
+  {
+   "zone": "Z4",
+   "kind": "slow",
    "pipe": "P_8245",
    "size": "small",
    "age_h": 95.6,
    "leak_lps": 1.11,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 410,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 63,
    "level": "high",
    "error_m": 1721,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 1.4
+   "size_error_pct": 1.4,
+   "before": {
+    "detected": true,
+    "score": 63,
+    "level": "high",
+    "error_m": 1721,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z4",
@@ -1443,12 +2016,23 @@
    "leak_lps": 6.38,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 306,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 63,
    "in_search": true,
    "suspect_rank": 5,
-   "size_error_pct": 0.6
+   "size_error_pct": 0.6,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 63,
+    "in_search": true,
+    "suspect_rank": 5
+   }
   },
   {
    "zone": "Z4",
@@ -1481,12 +2065,23 @@
    "leak_lps": 1.2,
    "detected": true,
    "model": "ok",
-   "score": 58,
-   "level": "high",
+   "nearest_logger_m": 432,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 72,
+   "level": "critical",
    "error_m": 3391,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 0.7
+   "size_error_pct": 0.7,
+   "before": {
+    "detected": true,
+    "score": 72,
+    "level": "critical",
+    "error_m": 3391,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z4",
@@ -1497,12 +2092,23 @@
    "leak_lps": 6.18,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 478,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 104,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 0.9
+   "size_error_pct": 0.9,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 104,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z4",
@@ -1533,12 +2139,23 @@
    "leak_lps": 3.21,
    "detected": true,
    "model": "ok",
-   "score": 58,
+   "nearest_logger_m": 515,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 64,
    "level": "high",
    "error_m": 42,
    "in_search": true,
    "suspect_rank": 2,
-   "size_error_pct": 0.7
+   "size_error_pct": 0.7,
+   "before": {
+    "detected": true,
+    "score": 64,
+    "level": "high",
+    "error_m": 42,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z4",
@@ -1549,12 +2166,23 @@
    "leak_lps": 6.01,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 621,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 81,
    "level": "critical",
    "error_m": 884,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 0.5
+   "size_error_pct": 0.5,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 884,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z4",
@@ -1583,12 +2211,23 @@
    "leak_lps": 1.14,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 352,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 53,
    "level": "high",
    "error_m": 415,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 1.4
+   "size_error_pct": 1.4,
+   "before": {
+    "detected": true,
+    "score": 53,
+    "level": "high",
+    "error_m": 415,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z4",
@@ -1599,23 +2238,32 @@
    "leak_lps": 6.53,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 400,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 214,
    "in_search": true,
    "suspect_rank": 3,
-   "size_error_pct": 0.5
+   "size_error_pct": 0.5,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 214,
+    "in_search": true,
+    "suspect_rank": 3
+   }
   },
   {
    "zone": "Z4",
    "kind": "normal",
    "fault": null,
-   "score": 12,
+   "score": 0,
    "level": "low",
    "false_alarm": false,
-   "signals": [
-    "WB-01"
-   ]
+   "signals": []
   },
   {
    "zone": "Z4",
@@ -1635,12 +2283,23 @@
    "leak_lps": 2.8,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 284,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 76,
    "level": "critical",
    "error_m": 161,
    "in_search": true,
    "suspect_rank": 2,
-   "size_error_pct": 3.1
+   "size_error_pct": 3.1,
+   "before": {
+    "detected": true,
+    "score": 76,
+    "level": "critical",
+    "error_m": 161,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z4",
@@ -1651,12 +2310,23 @@
    "leak_lps": 6.43,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 191,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 81,
    "level": "critical",
    "error_m": 142,
    "in_search": true,
    "suspect_rank": 2,
-   "size_error_pct": 2.1
+   "size_error_pct": 2.1,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 142,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z4",
@@ -1685,12 +2355,23 @@
    "leak_lps": 0.92,
    "detected": true,
    "model": "ok",
-   "score": 47,
+   "nearest_logger_m": 220,
+   "in_hearing_range": true,
+   "noise_heard": false,
+   "score": 57,
    "level": "high",
    "error_m": 74,
    "in_search": true,
    "suspect_rank": 2,
-   "size_error_pct": 10.9
+   "size_error_pct": 10.9,
+   "before": {
+    "detected": true,
+    "score": 57,
+    "level": "high",
+    "error_m": 74,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z4",
@@ -1701,12 +2382,23 @@
    "leak_lps": 6.46,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 291,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 81,
    "level": "critical",
    "error_m": 408,
    "in_search": true,
    "suspect_rank": 2,
-   "size_error_pct": 0.1
+   "size_error_pct": 0.1,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 408,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z4",
@@ -1761,12 +2453,23 @@
    "leak_lps": 0.97,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 381,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 27,
    "level": "watch",
    "error_m": 2980,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 0.1
+   "size_error_pct": 0.1,
+   "before": {
+    "detected": true,
+    "score": 27,
+    "level": "watch",
+    "error_m": 2980,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z5",
@@ -1777,12 +2480,23 @@
    "leak_lps": 5.82,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 376,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 534,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 2.5
+   "size_error_pct": 2.5,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 534,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z5",
@@ -1813,12 +2527,23 @@
    "leak_lps": 2.21,
    "detected": true,
    "model": "ok",
-   "score": 62,
-   "level": "high",
-   "error_m": 241,
+   "nearest_logger_m": 270,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 78,
+   "level": "critical",
+   "error_m": 270,
    "in_search": true,
-   "suspect_rank": null,
-   "size_error_pct": 0.8
+   "suspect_rank": 3,
+   "size_error_pct": 0.8,
+   "before": {
+    "detected": true,
+    "score": 62,
+    "level": "high",
+    "error_m": 241,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z5",
@@ -1829,21 +2554,34 @@
    "leak_lps": 5.66,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 460,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 81,
    "level": "critical",
    "error_m": 210,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 0.7
+   "size_error_pct": 0.7,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 210,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z5",
    "kind": "normal",
    "fault": null,
-   "score": 0,
+   "score": 12,
    "level": "low",
    "false_alarm": false,
-   "signals": []
+   "signals": [
+    "WB-01"
+   ]
   },
   {
    "zone": "Z5",
@@ -1863,12 +2601,23 @@
    "leak_lps": 0.81,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 175,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 27,
    "level": "watch",
    "error_m": 1490,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 3.3
+   "size_error_pct": 3.3,
+   "before": {
+    "detected": true,
+    "score": 27,
+    "level": "watch",
+    "error_m": 1490,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z5",
@@ -1879,12 +2628,23 @@
    "leak_lps": 6.05,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 456,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 81,
    "level": "critical",
    "error_m": 452,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 0.7
+   "size_error_pct": 0.7,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 452,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z5",
@@ -1901,12 +2661,10 @@
    "zone": "Z5",
    "kind": "faulty",
    "fault": "spikes",
-   "score": 12,
+   "score": 0,
    "level": "low",
    "false_alarm": false,
-   "signals": [
-    "WB-01"
-   ]
+   "signals": []
   },
   {
    "zone": "Z5",
@@ -1916,7 +2674,17 @@
    "age_h": 81.0,
    "leak_lps": 1.01,
    "detected": false,
-   "model": "ok"
+   "model": "ok",
+   "nearest_logger_m": 256,
+   "in_hearing_range": true,
+   "before": {
+    "detected": false,
+    "score": null,
+    "level": null,
+    "error_m": null,
+    "in_search": null,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z5",
@@ -1927,12 +2695,23 @@
    "leak_lps": 6.27,
    "detected": true,
    "model": "ok",
-   "score": 86,
+   "nearest_logger_m": 91,
+   "in_hearing_range": true,
+   "noise_heard": false,
+   "score": 80,
    "level": "critical",
    "error_m": 198,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 3.6
+   "size_error_pct": 3.6,
+   "before": {
+    "detected": true,
+    "score": 80,
+    "level": "critical",
+    "error_m": 198,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z5",
@@ -1963,12 +2742,23 @@
    "leak_lps": 2.71,
    "detected": true,
    "model": "ok",
-   "score": 27,
-   "level": "watch",
-   "error_m": 492,
+   "nearest_logger_m": 140,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 63,
+   "level": "high",
+   "error_m": 140,
    "in_search": true,
-   "suspect_rank": null,
-   "size_error_pct": 1.3
+   "suspect_rank": 1,
+   "size_error_pct": 1.3,
+   "before": {
+    "detected": true,
+    "score": 47,
+    "level": "high",
+    "error_m": 492,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z5",
@@ -1979,12 +2769,23 @@
    "leak_lps": 5.01,
    "detected": true,
    "model": "ok",
-   "score": 75,
+   "nearest_logger_m": 122,
+   "in_hearing_range": true,
+   "noise_heard": false,
+   "score": 70,
    "level": "critical",
    "error_m": 140,
    "in_search": true,
    "suspect_rank": 4,
-   "size_error_pct": 0.8
+   "size_error_pct": 0.8,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 140,
+    "in_search": true,
+    "suspect_rank": 4
+   }
   },
   {
    "zone": "Z5",
@@ -1999,13 +2800,11 @@
    "zone": "Z5",
    "kind": "faulty",
    "fault": "drift",
-   "score": 32,
-   "level": "watch",
-   "false_alarm": true,
+   "score": 12,
+   "level": "low",
+   "false_alarm": false,
    "signals": [
-    "WB-01",
-    "PR-01",
-    "IX-1"
+    "PR-01"
    ]
   },
   {
@@ -2017,12 +2816,23 @@
    "leak_lps": 2.54,
    "detected": true,
    "model": "ok",
-   "score": 64,
-   "level": "high",
-   "error_m": 230,
+   "nearest_logger_m": 216,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 84,
+   "level": "critical",
+   "error_m": 216,
    "in_search": true,
-   "suspect_rank": 2,
-   "size_error_pct": 3.8
+   "suspect_rank": 1,
+   "size_error_pct": 3.8,
+   "before": {
+    "detected": true,
+    "score": 68,
+    "level": "high",
+    "error_m": 230,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z5",
@@ -2033,24 +2843,33 @@
    "leak_lps": 4.95,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 190,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 905,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 0.7
+   "size_error_pct": 0.7,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 905,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z5",
    "kind": "normal",
    "fault": null,
-   "score": 32,
-   "level": "watch",
-   "false_alarm": true,
+   "score": 12,
+   "level": "low",
+   "false_alarm": false,
    "signals": [
-    "WB-01",
-    "PR-01",
-    "IX-1"
+    "PR-01"
    ]
   },
   {
@@ -2073,12 +2892,23 @@
    "leak_lps": 0.97,
    "detected": true,
    "model": "ok",
-   "score": 27,
-   "level": "watch",
-   "error_m": 165,
+   "nearest_logger_m": 167,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 63,
+   "level": "high",
+   "error_m": 167,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 6.8
+   "size_error_pct": 6.8,
+   "before": {
+    "detected": true,
+    "score": 47,
+    "level": "high",
+    "error_m": 165,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z5",
@@ -2089,12 +2919,23 @@
    "leak_lps": 5.37,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 142,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 423,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 2.2
+   "size_error_pct": 2.2,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 423,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z5",
@@ -2123,12 +2964,23 @@
    "leak_lps": 1.01,
    "detected": true,
    "model": "ok",
-   "score": 27,
-   "level": "watch",
-   "error_m": 1137,
-   "in_search": false,
-   "suspect_rank": null,
-   "size_error_pct": 0.5
+   "nearest_logger_m": 71,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 63,
+   "level": "high",
+   "error_m": 71,
+   "in_search": true,
+   "suspect_rank": 1,
+   "size_error_pct": 0.5,
+   "before": {
+    "detected": true,
+    "score": 47,
+    "level": "high",
+    "error_m": 1137,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z5",
@@ -2139,12 +2991,23 @@
    "leak_lps": 5.97,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 327,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 460,
    "in_search": true,
    "suspect_rank": 4,
-   "size_error_pct": 2.8
+   "size_error_pct": 2.8,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 460,
+    "in_search": true,
+    "suspect_rank": 4
+   }
   },
   {
    "zone": "Z5",
@@ -2161,10 +3024,12 @@
    "zone": "Z5",
    "kind": "faulty",
    "fault": "stuck",
-   "score": 0,
+   "score": 12,
    "level": "low",
    "false_alarm": false,
-   "signals": []
+   "signals": [
+    "WB-01"
+   ]
   },
   {
    "zone": "Z5",
@@ -2199,12 +3064,23 @@
    "leak_lps": 1.08,
    "detected": true,
    "model": "ok",
-   "score": 33,
-   "level": "watch",
+   "nearest_logger_m": 364,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 53,
+   "level": "high",
    "error_m": 533,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 0.9
+   "size_error_pct": 0.9,
+   "before": {
+    "detected": true,
+    "score": 53,
+    "level": "high",
+    "error_m": 533,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z6",
@@ -2215,12 +3091,23 @@
    "leak_lps": 5.46,
    "detected": true,
    "model": "ok",
-   "score": 81,
+   "nearest_logger_m": 424,
+   "in_hearing_range": false,
+   "noise_heard": true,
+   "score": 91,
    "level": "critical",
    "error_m": 396,
    "in_search": true,
    "suspect_rank": 2,
-   "size_error_pct": 4.2
+   "size_error_pct": 4.2,
+   "before": {
+    "detected": true,
+    "score": 75,
+    "level": "critical",
+    "error_m": 396,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z6",
@@ -2251,12 +3138,23 @@
    "leak_lps": 1.01,
    "detected": true,
    "model": "ok",
-   "score": 38,
-   "level": "watch",
+   "nearest_logger_m": 539,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 58,
+   "level": "high",
    "error_m": 573,
    "in_search": true,
    "suspect_rank": 5,
-   "size_error_pct": 6.8
+   "size_error_pct": 6.8,
+   "before": {
+    "detected": true,
+    "score": 58,
+    "level": "high",
+    "error_m": 573,
+    "in_search": true,
+    "suspect_rank": 5
+   }
   },
   {
    "zone": "Z6",
@@ -2267,12 +3165,23 @@
    "leak_lps": 6.36,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 470,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 171,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 1.5
+   "size_error_pct": 1.5,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 171,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z6",
@@ -2287,11 +3196,12 @@
    "zone": "Z6",
    "kind": "faulty",
    "fault": "stuck",
-   "score": 12,
-   "level": "low",
-   "false_alarm": false,
+   "score": 22,
+   "level": "watch",
+   "false_alarm": true,
    "signals": [
-    "PR-01"
+    "PR-01",
+    "AC-01"
    ]
   },
   {
@@ -2303,12 +3213,23 @@
    "leak_lps": 2.93,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 293,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 53,
    "level": "high",
    "error_m": 225,
    "in_search": true,
-   "suspect_rank": null,
-   "size_error_pct": 1.1
+   "suspect_rank": 5,
+   "size_error_pct": 1.1,
+   "before": {
+    "detected": true,
+    "score": 53,
+    "level": "high",
+    "error_m": 225,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z6",
@@ -2319,12 +3240,23 @@
    "leak_lps": 5.39,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 104,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 293,
    "in_search": true,
    "suspect_rank": 3,
-   "size_error_pct": 0.2
+   "size_error_pct": 0.2,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 293,
+    "in_search": true,
+    "suspect_rank": 3
+   }
   },
   {
    "zone": "Z6",
@@ -2341,10 +3273,12 @@
    "zone": "Z6",
    "kind": "faulty",
    "fault": "gaps",
-   "score": 0,
+   "score": 12,
    "level": "low",
    "false_alarm": false,
-   "signals": []
+   "signals": [
+    "WB-01"
+   ]
   },
   {
    "zone": "Z6",
@@ -2355,12 +3289,23 @@
    "leak_lps": 3.04,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 127,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 53,
    "level": "high",
    "error_m": 178,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 2.1
+   "size_error_pct": 2.1,
+   "before": {
+    "detected": true,
+    "score": 53,
+    "level": "high",
+    "error_m": 178,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z6",
@@ -2371,21 +3316,34 @@
    "leak_lps": 7.11,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 122,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 81,
    "level": "critical",
    "error_m": 609,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 1.7
+   "size_error_pct": 1.7,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 609,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z6",
    "kind": "normal",
    "fault": null,
-   "score": 0,
+   "score": 12,
    "level": "low",
    "false_alarm": false,
-   "signals": []
+   "signals": [
+    "WB-01"
+   ]
   },
   {
    "zone": "Z6",
@@ -2405,12 +3363,23 @@
    "leak_lps": 1.12,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 279,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 53,
    "level": "high",
    "error_m": 465,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 1.5
+   "size_error_pct": 1.5,
+   "before": {
+    "detected": true,
+    "score": 53,
+    "level": "high",
+    "error_m": 465,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z6",
@@ -2421,12 +3390,23 @@
    "leak_lps": 7.2,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 307,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 81,
    "level": "critical",
    "error_m": 134,
    "in_search": true,
    "suspect_rank": 2,
-   "size_error_pct": 0.5
+   "size_error_pct": 0.5,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 134,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z6",
@@ -2457,12 +3437,23 @@
    "leak_lps": 1.11,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 340,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 33,
    "level": "watch",
    "error_m": 611,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 5.0
+   "size_error_pct": 5.0,
+   "before": {
+    "detected": true,
+    "score": 33,
+    "level": "watch",
+    "error_m": 611,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z6",
@@ -2473,12 +3464,23 @@
    "leak_lps": 5.07,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 231,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 417,
    "in_search": true,
    "suspect_rank": 2,
-   "size_error_pct": 1.8
+   "size_error_pct": 1.8,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 417,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z6",
@@ -2509,12 +3511,23 @@
    "leak_lps": 1.06,
    "detected": true,
    "model": "ok",
-   "score": 53,
+   "nearest_logger_m": 95,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 49,
    "level": "high",
-   "error_m": 159,
+   "error_m": 95,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 2.2
+   "size_error_pct": 2.2,
+   "before": {
+    "detected": true,
+    "score": 33,
+    "level": "watch",
+    "error_m": 159,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z6",
@@ -2525,12 +3538,23 @@
    "leak_lps": 5.52,
    "detected": true,
    "model": "ok",
-   "score": 75,
+   "nearest_logger_m": 401,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 81,
    "level": "critical",
    "error_m": 430,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 1.4
+   "size_error_pct": 1.4,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 430,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z6",
@@ -2561,12 +3585,23 @@
    "leak_lps": 3.24,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 311,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 53,
    "level": "high",
    "error_m": 1419,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 1.5
+   "size_error_pct": 1.5,
+   "before": {
+    "detected": true,
+    "score": 53,
+    "level": "high",
+    "error_m": 1419,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z6",
@@ -2577,12 +3612,23 @@
    "leak_lps": 6.1,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 397,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 79,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 0.4
+   "size_error_pct": 0.4,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 79,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z6",
@@ -2635,12 +3681,23 @@
    "leak_lps": 2.82,
    "detected": true,
    "model": "ok",
-   "score": 84,
+   "nearest_logger_m": 341,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 76,
    "level": "critical",
    "error_m": 86,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 0.8
+   "size_error_pct": 0.8,
+   "before": {
+    "detected": true,
+    "score": 76,
+    "level": "critical",
+    "error_m": 86,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z7",
@@ -2651,12 +3708,23 @@
    "leak_lps": 5.73,
    "detected": true,
    "model": "ok",
-   "score": 86,
+   "nearest_logger_m": 495,
+   "in_hearing_range": false,
+   "noise_heard": true,
+   "score": 100,
    "level": "critical",
    "error_m": 146,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 2.1
+   "size_error_pct": 2.1,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 146,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z7",
@@ -2685,12 +3753,23 @@
    "leak_lps": 0.77,
    "detected": true,
    "model": "ok",
-   "score": 47,
+   "nearest_logger_m": 169,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 63,
    "level": "high",
-   "error_m": 796,
-   "in_search": false,
-   "suspect_rank": null,
-   "size_error_pct": 2.7
+   "error_m": 169,
+   "in_search": true,
+   "suspect_rank": 2,
+   "size_error_pct": 2.7,
+   "before": {
+    "detected": true,
+    "score": 47,
+    "level": "high",
+    "error_m": 796,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z7",
@@ -2701,12 +3780,23 @@
    "leak_lps": 5.16,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 295,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 251,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 0.5
+   "size_error_pct": 0.5,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 251,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z7",
@@ -2735,12 +3825,23 @@
    "leak_lps": 0.73,
    "detected": true,
    "model": "ok",
-   "score": 47,
+   "nearest_logger_m": 353,
+   "in_hearing_range": false,
+   "noise_heard": true,
+   "score": 63,
    "level": "high",
    "error_m": 331,
    "in_search": true,
    "suspect_rank": 5,
-   "size_error_pct": 0.5
+   "size_error_pct": 0.5,
+   "before": {
+    "detected": true,
+    "score": 47,
+    "level": "high",
+    "error_m": 331,
+    "in_search": true,
+    "suspect_rank": 5
+   }
   },
   {
    "zone": "Z7",
@@ -2751,12 +3852,23 @@
    "leak_lps": 6.38,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 556,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 81,
    "level": "critical",
    "error_m": 547,
    "in_search": true,
    "suspect_rank": 5,
-   "size_error_pct": 1.9
+   "size_error_pct": 1.9,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 547,
+    "in_search": true,
+    "suspect_rank": 5
+   }
   },
   {
    "zone": "Z7",
@@ -2787,12 +3899,23 @@
    "leak_lps": 1.92,
    "detected": true,
    "model": "ok",
-   "score": 64,
-   "level": "high",
+   "nearest_logger_m": 310,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 76,
+   "level": "critical",
    "error_m": 84,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 1.9
+   "size_error_pct": 1.9,
+   "before": {
+    "detected": true,
+    "score": 76,
+    "level": "critical",
+    "error_m": 84,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z7",
@@ -2803,21 +3926,34 @@
    "leak_lps": 5.57,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 68,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 81,
    "level": "critical",
    "error_m": 288,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 3.1
+   "size_error_pct": 3.1,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 288,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z7",
    "kind": "normal",
    "fault": null,
-   "score": 0,
+   "score": 12,
    "level": "low",
    "false_alarm": false,
-   "signals": []
+   "signals": [
+    "WB-01"
+   ]
   },
   {
    "zone": "Z7",
@@ -2837,12 +3973,23 @@
    "leak_lps": 2.49,
    "detected": true,
    "model": "ok",
-   "score": 64,
+   "nearest_logger_m": 481,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 58,
    "level": "high",
    "error_m": 79,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 1.2
+   "size_error_pct": 1.2,
+   "before": {
+    "detected": true,
+    "score": 58,
+    "level": "high",
+    "error_m": 79,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z7",
@@ -2853,12 +4000,23 @@
    "leak_lps": 5.38,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 97,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 268,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 0.3
+   "size_error_pct": 0.3,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 268,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z7",
@@ -2889,12 +4047,23 @@
    "leak_lps": 0.96,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 278,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 53,
    "level": "high",
    "error_m": 476,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 1.6
+   "size_error_pct": 1.6,
+   "before": {
+    "detected": true,
+    "score": 53,
+    "level": "high",
+    "error_m": 476,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z7",
@@ -2905,12 +4074,23 @@
    "leak_lps": 6.21,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 360,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 277,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 1.2
+   "size_error_pct": 1.2,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 277,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z7",
@@ -2939,12 +4119,23 @@
    "leak_lps": 0.95,
    "detected": true,
    "model": "ok",
-   "score": 58,
-   "level": "high",
+   "nearest_logger_m": 138,
+   "in_hearing_range": true,
+   "noise_heard": false,
+   "score": 38,
+   "level": "watch",
    "error_m": 592,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 2.0
+   "size_error_pct": 2.0,
+   "before": {
+    "detected": true,
+    "score": 38,
+    "level": "watch",
+    "error_m": 592,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z7",
@@ -2955,12 +4146,97 @@
    "leak_lps": 5.58,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 37,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 81,
    "level": "critical",
    "error_m": 151,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 0.6
+   "size_error_pct": 0.6,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 151,
+    "in_search": true,
+    "suspect_rank": 1
+   }
+  },
+  {
+   "zone": "Z7",
+   "kind": "normal",
+   "fault": null,
+   "score": 0,
+   "level": "low",
+   "false_alarm": false,
+   "signals": []
+  },
+  {
+   "zone": "Z7",
+   "kind": "faulty",
+   "fault": "reset",
+   "score": 12,
+   "level": "low",
+   "false_alarm": false,
+   "signals": [
+    "WB-01"
+   ]
+  },
+  {
+   "zone": "Z7",
+   "kind": "slow",
+   "pipe": "P_599",
+   "size": "small",
+   "age_h": 48.7,
+   "leak_lps": 1.03,
+   "detected": true,
+   "model": "ok",
+   "nearest_logger_m": 277,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 74,
+   "level": "critical",
+   "error_m": 53,
+   "in_search": true,
+   "suspect_rank": 1,
+   "size_error_pct": 1.8,
+   "before": {
+    "detected": true,
+    "score": 58,
+    "level": "high",
+    "error_m": 53,
+    "in_search": true,
+    "suspect_rank": 1
+   }
+  },
+  {
+   "zone": "Z7",
+   "kind": "burst",
+   "pipe": "P_629",
+   "size": "large",
+   "age_h": 2.1,
+   "leak_lps": 5.11,
+   "detected": true,
+   "model": "ok",
+   "nearest_logger_m": 374,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 86,
+   "level": "critical",
+   "error_m": 215,
+   "in_search": true,
+   "suspect_rank": 2,
+   "size_error_pct": 1.8,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 215,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z7",
@@ -2972,56 +4248,6 @@
    "signals": [
     "WB-01"
    ]
-  },
-  {
-   "zone": "Z7",
-   "kind": "faulty",
-   "fault": "reset",
-   "score": 0,
-   "level": "low",
-   "false_alarm": false,
-   "signals": []
-  },
-  {
-   "zone": "Z7",
-   "kind": "slow",
-   "pipe": "P_599",
-   "size": "small",
-   "age_h": 48.7,
-   "leak_lps": 1.03,
-   "detected": true,
-   "model": "ok",
-   "score": 64,
-   "level": "high",
-   "error_m": 53,
-   "in_search": true,
-   "suspect_rank": 1,
-   "size_error_pct": 1.8
-  },
-  {
-   "zone": "Z7",
-   "kind": "burst",
-   "pipe": "P_629",
-   "size": "large",
-   "age_h": 2.1,
-   "leak_lps": 5.11,
-   "detected": true,
-   "model": "ok",
-   "score": 86,
-   "level": "critical",
-   "error_m": 215,
-   "in_search": true,
-   "suspect_rank": 2,
-   "size_error_pct": 1.8
-  },
-  {
-   "zone": "Z7",
-   "kind": "normal",
-   "fault": null,
-   "score": 0,
-   "level": "low",
-   "false_alarm": false,
-   "signals": []
   },
   {
    "zone": "Z7",
@@ -3067,12 +4293,23 @@
    "leak_lps": 0.79,
    "detected": true,
    "model": "ok",
-   "score": 47,
-   "level": "high",
+   "nearest_logger_m": 567,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 27,
+   "level": "watch",
    "error_m": 962,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 7.8
+   "size_error_pct": 7.8,
+   "before": {
+    "detected": true,
+    "score": 27,
+    "level": "watch",
+    "error_m": 962,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z8",
@@ -3083,12 +4320,23 @@
    "leak_lps": 5.38,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 513,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 204,
    "in_search": true,
    "suspect_rank": 5,
-   "size_error_pct": 0.8
+   "size_error_pct": 0.8,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 204,
+    "in_search": true,
+    "suspect_rank": 5
+   }
   },
   {
    "zone": "Z8",
@@ -3105,13 +4353,11 @@
    "zone": "Z8",
    "kind": "faulty",
    "fault": "offline",
-   "score": 32,
-   "level": "watch",
-   "false_alarm": true,
+   "score": 12,
+   "level": "low",
+   "false_alarm": false,
    "signals": [
-    "WB-01",
-    "PR-01",
-    "IX-1"
+    "PR-01"
    ]
   },
   {
@@ -3123,12 +4369,23 @@
    "leak_lps": 1.12,
    "detected": true,
    "model": "ok",
-   "score": 53,
+   "nearest_logger_m": 598,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 63,
    "level": "high",
    "error_m": 150,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 0.2
+   "size_error_pct": 0.2,
+   "before": {
+    "detected": true,
+    "score": 63,
+    "level": "high",
+    "error_m": 150,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z8",
@@ -3139,21 +4396,34 @@
    "leak_lps": 4.61,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 461,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 421,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 5.6
+   "size_error_pct": 5.6,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 421,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z8",
    "kind": "normal",
    "fault": null,
-   "score": 0,
+   "score": 12,
    "level": "low",
    "false_alarm": false,
-   "signals": []
+   "signals": [
+    "WB-01"
+   ]
   },
   {
    "zone": "Z8",
@@ -3173,12 +4443,23 @@
    "leak_lps": 2.18,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 395,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 71,
    "level": "critical",
    "error_m": 1178,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 0.7
+   "size_error_pct": 0.7,
+   "before": {
+    "detected": true,
+    "score": 71,
+    "level": "critical",
+    "error_m": 1178,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z8",
@@ -3189,22 +4470,35 @@
    "leak_lps": 6.47,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 591,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 548,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 3.0
+   "size_error_pct": 3.0,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 548,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z8",
    "kind": "normal",
    "fault": null,
-   "score": 12,
-   "level": "low",
-   "false_alarm": false,
+   "score": 32,
+   "level": "watch",
+   "false_alarm": true,
    "signals": [
-    "PR-01"
+    "WB-01",
+    "PR-01",
+    "IX-1"
    ]
   },
   {
@@ -3227,12 +4521,23 @@
    "leak_lps": 1.13,
    "detected": true,
    "model": "ok",
-   "score": 33,
-   "level": "watch",
+   "nearest_logger_m": 135,
+   "in_hearing_range": true,
+   "noise_heard": false,
+   "score": 53,
+   "level": "high",
    "error_m": 772,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 3.5
+   "size_error_pct": 3.5,
+   "before": {
+    "detected": true,
+    "score": 53,
+    "level": "high",
+    "error_m": 772,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z8",
@@ -3243,12 +4548,23 @@
    "leak_lps": 5.48,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 815,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 459,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 2.1
+   "size_error_pct": 2.1,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 459,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z8",
@@ -3277,12 +4593,23 @@
    "leak_lps": 1.01,
    "detected": true,
    "model": "ok",
-   "score": 38,
-   "level": "watch",
+   "nearest_logger_m": 468,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 58,
+   "level": "high",
    "error_m": 116,
    "in_search": true,
    "suspect_rank": 2,
-   "size_error_pct": 5.0
+   "size_error_pct": 5.0,
+   "before": {
+    "detected": true,
+    "score": 58,
+    "level": "high",
+    "error_m": 116,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z8",
@@ -3293,12 +4620,23 @@
    "leak_lps": 5.24,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 73,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 445,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 0.3
+   "size_error_pct": 0.3,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 445,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z8",
@@ -3331,12 +4669,23 @@
    "leak_lps": 2.44,
    "detected": true,
    "model": "ok",
-   "score": 64,
+   "nearest_logger_m": 416,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 58,
    "level": "high",
    "error_m": 256,
    "in_search": true,
    "suspect_rank": 3,
-   "size_error_pct": 0.0
+   "size_error_pct": 0.0,
+   "before": {
+    "detected": true,
+    "score": 58,
+    "level": "high",
+    "error_m": 256,
+    "in_search": true,
+    "suspect_rank": 3
+   }
   },
   {
    "zone": "Z8",
@@ -3347,21 +4696,34 @@
    "leak_lps": 6.6,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 571,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 81,
    "level": "critical",
    "error_m": 243,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 0.0
+   "size_error_pct": 0.0,
+   "before": {
+    "detected": true,
+    "score": 81,
+    "level": "critical",
+    "error_m": 243,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z8",
    "kind": "normal",
    "fault": null,
-   "score": 0,
+   "score": 12,
    "level": "low",
    "false_alarm": false,
-   "signals": []
+   "signals": [
+    "WB-01"
+   ]
   },
   {
    "zone": "Z8",
@@ -3381,12 +4743,23 @@
    "leak_lps": 1.15,
    "detected": true,
    "model": "ok",
-   "score": 53,
+   "nearest_logger_m": 561,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 63,
    "level": "high",
    "error_m": 694,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 0.5
+   "size_error_pct": 0.5,
+   "before": {
+    "detected": true,
+    "score": 63,
+    "level": "high",
+    "error_m": 694,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z8",
@@ -3397,12 +4770,23 @@
    "leak_lps": 5.52,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 152,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 94,
    "in_search": true,
    "suspect_rank": 3,
-   "size_error_pct": 0.7
+   "size_error_pct": 0.7,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 94,
+    "in_search": true,
+    "suspect_rank": 3
+   }
   },
   {
    "zone": "Z8",
@@ -3419,13 +4803,11 @@
    "zone": "Z8",
    "kind": "faulty",
    "fault": "reset",
-   "score": 32,
-   "level": "watch",
-   "false_alarm": true,
+   "score": 12,
+   "level": "low",
+   "false_alarm": false,
    "signals": [
-    "WB-01",
-    "PR-01",
-    "IX-1"
+    "PR-01"
    ]
   },
   {
@@ -3437,12 +4819,23 @@
    "leak_lps": 0.72,
    "detected": true,
    "model": "ok",
-   "score": 32,
-   "level": "watch",
+   "nearest_logger_m": 396,
+   "in_hearing_range": false,
+   "noise_heard": true,
+   "score": 78,
+   "level": "critical",
    "error_m": 1161,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 5.3
+   "size_error_pct": 5.3,
+   "before": {
+    "detected": true,
+    "score": 62,
+    "level": "high",
+    "error_m": 1161,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z8",
@@ -3453,12 +4846,23 @@
    "leak_lps": 7.23,
    "detected": true,
    "model": "ok",
+   "nearest_logger_m": 257,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 86,
    "level": "critical",
    "error_m": 3022,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 1.7
+   "size_error_pct": 1.7,
+   "before": {
+    "detected": true,
+    "score": 86,
+    "level": "critical",
+    "error_m": 3022,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z8",
@@ -3517,12 +4921,23 @@
    "leak_lps": 4.94,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 282,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 70,
    "level": "critical",
    "error_m": 1478,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 21.7
+   "size_error_pct": 21.7,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 1478,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z1",
@@ -3533,12 +4948,23 @@
    "leak_lps": 5.3,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 102,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 70,
    "level": "critical",
    "error_m": 1303,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 16.3
+   "size_error_pct": 16.3,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 1303,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z1",
@@ -3549,12 +4975,23 @@
    "leak_lps": 2.17,
    "detected": true,
    "model": "off",
-   "score": 46,
+   "nearest_logger_m": 224,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 64,
    "level": "high",
-   "error_m": 284,
+   "error_m": 70,
    "in_search": true,
    "suspect_rank": 2,
-   "size_error_pct": 50.5
+   "size_error_pct": 50.5,
+   "before": {
+    "detected": true,
+    "score": 42,
+    "level": "watch",
+    "error_m": 284,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z1",
@@ -3563,8 +5000,25 @@
    "size": "small",
    "age_h": 90.8,
    "leak_lps": 0.86,
-   "detected": false,
-   "model": "off"
+   "detected": true,
+   "model": "off",
+   "nearest_logger_m": 381,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 32,
+   "level": "watch",
+   "error_m": 3529,
+   "in_search": false,
+   "suspect_rank": null,
+   "size_error_pct": 152.5,
+   "before": {
+    "detected": true,
+    "score": 32,
+    "level": "watch",
+    "error_m": 3529,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z1",
@@ -3574,7 +5028,17 @@
    "age_h": 19.1,
    "leak_lps": 0.88,
    "detected": false,
-   "model": "off"
+   "model": "off",
+   "nearest_logger_m": 238,
+   "in_hearing_range": true,
+   "before": {
+    "detected": false,
+    "score": null,
+    "level": null,
+    "error_m": null,
+    "in_search": null,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z1",
@@ -3585,12 +5049,23 @@
    "leak_lps": 2.31,
    "detected": true,
    "model": "off",
-   "score": 48,
-   "level": "high",
-   "error_m": 847,
+   "nearest_logger_m": 168,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 28,
+   "level": "watch",
+   "error_m": 168,
    "in_search": true,
-   "suspect_rank": null,
-   "size_error_pct": 10.6
+   "suspect_rank": 2,
+   "size_error_pct": 10.6,
+   "before": {
+    "detected": false,
+    "score": null,
+    "level": null,
+    "error_m": null,
+    "in_search": null,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z1",
@@ -3601,12 +5076,23 @@
    "leak_lps": 5.16,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 176,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 70,
    "level": "critical",
    "error_m": 1790,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 21.1
+   "size_error_pct": 21.1,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 1790,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z1",
@@ -3617,12 +5103,23 @@
    "leak_lps": 4.9,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 219,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 70,
    "level": "critical",
    "error_m": 336,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 24.0
+   "size_error_pct": 24.0,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 336,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z2",
@@ -3633,12 +5130,23 @@
    "leak_lps": 2.75,
    "detected": true,
    "model": "off",
-   "score": 48,
-   "level": "high",
+   "nearest_logger_m": 226,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 72,
+   "level": "critical",
    "error_m": 2006,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 0.3
+   "size_error_pct": 0.3,
+   "before": {
+    "detected": true,
+    "score": 56,
+    "level": "high",
+    "error_m": 2006,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z2",
@@ -3649,12 +5157,23 @@
    "leak_lps": 2.66,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 229,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 38,
    "level": "watch",
    "error_m": 575,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 14.3
+   "size_error_pct": 14.3,
+   "before": {
+    "detected": true,
+    "score": 38,
+    "level": "watch",
+    "error_m": 575,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z2",
@@ -3663,14 +5182,18 @@
    "size": "medium",
    "age_h": 21.7,
    "leak_lps": 2.89,
-   "detected": true,
+   "detected": false,
    "model": "off",
-   "score": 38,
-   "level": "watch",
-   "error_m": 936,
-   "in_search": true,
-   "suspect_rank": null,
-   "size_error_pct": 1.9
+   "nearest_logger_m": 231,
+   "in_hearing_range": true,
+   "before": {
+    "detected": false,
+    "score": null,
+    "level": null,
+    "error_m": null,
+    "in_search": null,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z2",
@@ -3681,12 +5204,23 @@
    "leak_lps": 6.24,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 316,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 70,
    "level": "critical",
    "error_m": 369,
    "in_search": true,
    "suspect_rank": 2,
-   "size_error_pct": 3.6
+   "size_error_pct": 3.6,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 369,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z2",
@@ -3697,12 +5231,23 @@
    "leak_lps": 6.14,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 286,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 70,
    "level": "critical",
    "error_m": 2181,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 3.0
+   "size_error_pct": 3.0,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 2181,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z2",
@@ -3713,12 +5258,23 @@
    "leak_lps": 2.86,
    "detected": true,
    "model": "off",
-   "score": 52,
+   "nearest_logger_m": 256,
+   "in_hearing_range": true,
+   "noise_heard": false,
+   "score": 48,
    "level": "high",
    "error_m": 361,
    "in_search": true,
    "suspect_rank": 5,
-   "size_error_pct": 4.1
+   "size_error_pct": 4.1,
+   "before": {
+    "detected": true,
+    "score": 48,
+    "level": "high",
+    "error_m": 361,
+    "in_search": true,
+    "suspect_rank": 5
+   }
   },
   {
    "zone": "Z2",
@@ -3727,8 +5283,25 @@
    "size": "small",
    "age_h": 80.4,
    "leak_lps": 1.06,
-   "detected": false,
-   "model": "off"
+   "detected": true,
+   "model": "off",
+   "nearest_logger_m": 297,
+   "in_hearing_range": true,
+   "noise_heard": false,
+   "score": 32,
+   "level": "watch",
+   "error_m": 2247,
+   "in_search": false,
+   "suspect_rank": null,
+   "size_error_pct": 59.8,
+   "before": {
+    "detected": true,
+    "score": 32,
+    "level": "watch",
+    "error_m": 2247,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z2",
@@ -3739,12 +5312,23 @@
    "leak_lps": 3.16,
    "detected": true,
    "model": "off",
-   "score": 44,
-   "level": "watch",
-   "error_m": 555,
+   "nearest_logger_m": 263,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 72,
+   "level": "critical",
+   "error_m": 263,
    "in_search": true,
-   "suspect_rank": 2,
-   "size_error_pct": 22.6
+   "suspect_rank": 1,
+   "size_error_pct": 22.6,
+   "before": {
+    "detected": true,
+    "score": 56,
+    "level": "high",
+    "error_m": 555,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z3",
@@ -3755,12 +5339,23 @@
    "leak_lps": 2.27,
    "detected": true,
    "model": "off",
-   "score": 56,
+   "nearest_logger_m": 195,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 64,
    "level": "high",
-   "error_m": 214,
+   "error_m": 195,
    "in_search": true,
-   "suspect_rank": 3,
-   "size_error_pct": 18.0
+   "suspect_rank": 1,
+   "size_error_pct": 18.0,
+   "before": {
+    "detected": true,
+    "score": 48,
+    "level": "high",
+    "error_m": 214,
+    "in_search": true,
+    "suspect_rank": 3
+   }
   },
   {
    "zone": "Z3",
@@ -3771,12 +5366,23 @@
    "leak_lps": 2.58,
    "detected": true,
    "model": "off",
-   "score": 56,
+   "nearest_logger_m": 344,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 48,
    "level": "high",
    "error_m": 668,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 29.9
+   "size_error_pct": 29.9,
+   "before": {
+    "detected": true,
+    "score": 48,
+    "level": "high",
+    "error_m": 668,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z3",
@@ -3787,12 +5393,23 @@
    "leak_lps": 0.97,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 283,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 42,
    "level": "watch",
    "error_m": 176,
    "in_search": true,
    "suspect_rank": 2,
-   "size_error_pct": 68.5
+   "size_error_pct": 68.5,
+   "before": {
+    "detected": true,
+    "score": 42,
+    "level": "watch",
+    "error_m": 176,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z3",
@@ -3803,12 +5420,23 @@
    "leak_lps": 2.35,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 354,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 48,
    "level": "high",
    "error_m": 713,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 2.1
+   "size_error_pct": 2.1,
+   "before": {
+    "detected": true,
+    "score": 48,
+    "level": "high",
+    "error_m": 713,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z3",
@@ -3819,12 +5447,23 @@
    "leak_lps": 6.38,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 78,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 70,
    "level": "critical",
    "error_m": 364,
    "in_search": true,
    "suspect_rank": 2,
-   "size_error_pct": 14.6
+   "size_error_pct": 14.6,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 364,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z3",
@@ -3835,12 +5474,23 @@
    "leak_lps": 2.33,
    "detected": true,
    "model": "off",
-   "score": 56,
+   "nearest_logger_m": 355,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 48,
    "level": "high",
    "error_m": 290,
    "in_search": true,
-   "suspect_rank": 4,
-   "size_error_pct": 5.9
+   "suspect_rank": 3,
+   "size_error_pct": 5.9,
+   "before": {
+    "detected": true,
+    "score": 48,
+    "level": "high",
+    "error_m": 290,
+    "in_search": true,
+    "suspect_rank": 4
+   }
   },
   {
    "zone": "Z3",
@@ -3851,12 +5501,23 @@
    "leak_lps": 5.92,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 281,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 70,
    "level": "critical",
    "error_m": 205,
    "in_search": true,
    "suspect_rank": 3,
-   "size_error_pct": 2.9
+   "size_error_pct": 2.9,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 205,
+    "in_search": true,
+    "suspect_rank": 3
+   }
   },
   {
    "zone": "Z3",
@@ -3867,12 +5528,23 @@
    "leak_lps": 2.67,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 115,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 38,
    "level": "watch",
    "error_m": 1531,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 16.3
+   "size_error_pct": 16.3,
+   "before": {
+    "detected": true,
+    "score": 38,
+    "level": "watch",
+    "error_m": 1531,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z4",
@@ -3883,12 +5555,23 @@
    "leak_lps": 6.58,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 341,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 70,
    "level": "critical",
    "error_m": 511,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 2.8
+   "size_error_pct": 2.8,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 511,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z4",
@@ -3899,12 +5582,23 @@
    "leak_lps": 2.84,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 360,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 56,
    "level": "high",
    "error_m": 372,
    "in_search": true,
    "suspect_rank": 5,
-   "size_error_pct": 7.0
+   "size_error_pct": 7.0,
+   "before": {
+    "detected": true,
+    "score": 56,
+    "level": "high",
+    "error_m": 372,
+    "in_search": true,
+    "suspect_rank": 5
+   }
   },
   {
    "zone": "Z4",
@@ -3915,12 +5609,23 @@
    "leak_lps": 2.77,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 463,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 56,
    "level": "high",
    "error_m": 994,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 11.1
+   "size_error_pct": 11.1,
+   "before": {
+    "detected": true,
+    "score": 56,
+    "level": "high",
+    "error_m": 994,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z4",
@@ -3931,12 +5636,23 @@
    "leak_lps": 6.34,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 536,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 70,
    "level": "critical",
    "error_m": 202,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 1.0
+   "size_error_pct": 1.0,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 202,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z4",
@@ -3947,12 +5663,23 @@
    "leak_lps": 2.92,
    "detected": true,
    "model": "off",
-   "score": 56,
-   "level": "high",
-   "error_m": 1319,
-   "in_search": false,
-   "suspect_rank": null,
-   "size_error_pct": 10.0
+   "nearest_logger_m": 260,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 72,
+   "level": "critical",
+   "error_m": 260,
+   "in_search": true,
+   "suspect_rank": 1,
+   "size_error_pct": 10.0,
+   "before": {
+    "detected": true,
+    "score": 56,
+    "level": "high",
+    "error_m": 1319,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z4",
@@ -3963,12 +5690,23 @@
    "leak_lps": 1.03,
    "detected": true,
    "model": "off",
-   "score": 38,
-   "level": "watch",
+   "nearest_logger_m": 122,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 64,
+   "level": "high",
    "error_m": 2569,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 16.7
+   "size_error_pct": 16.7,
+   "before": {
+    "detected": true,
+    "score": 48,
+    "level": "high",
+    "error_m": 2569,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z4",
@@ -3979,12 +5717,23 @@
    "leak_lps": 1.02,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 522,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 48,
    "level": "high",
    "error_m": 555,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 38.2
+   "size_error_pct": 38.2,
+   "before": {
+    "detected": true,
+    "score": 48,
+    "level": "high",
+    "error_m": 555,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z4",
@@ -3995,12 +5744,23 @@
    "leak_lps": 2.49,
    "detected": true,
    "model": "off",
-   "score": 44,
-   "level": "watch",
+   "nearest_logger_m": 521,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 56,
+   "level": "high",
    "error_m": 2479,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 16.6
+   "size_error_pct": 16.6,
+   "before": {
+    "detected": true,
+    "score": 56,
+    "level": "high",
+    "error_m": 2479,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z5",
@@ -4011,12 +5771,23 @@
    "leak_lps": 5.88,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 378,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 70,
    "level": "critical",
    "error_m": 991,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 2.1
+   "size_error_pct": 2.1,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 991,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z5",
@@ -4027,12 +5798,23 @@
    "leak_lps": 2.3,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 241,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 38,
    "level": "watch",
    "error_m": 453,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 36.9
+   "size_error_pct": 36.9,
+   "before": {
+    "detected": true,
+    "score": 38,
+    "level": "watch",
+    "error_m": 453,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z5",
@@ -4041,8 +5823,25 @@
    "size": "small",
    "age_h": 13.3,
    "leak_lps": 1.03,
-   "detected": false,
-   "model": "off"
+   "detected": true,
+   "model": "off",
+   "nearest_logger_m": 128,
+   "in_hearing_range": true,
+   "noise_heard": false,
+   "score": 32,
+   "level": "watch",
+   "error_m": 1055,
+   "in_search": true,
+   "suspect_rank": null,
+   "size_error_pct": 107.3,
+   "before": {
+    "detected": true,
+    "score": 32,
+    "level": "watch",
+    "error_m": 1055,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z5",
@@ -4053,12 +5852,23 @@
    "leak_lps": 2.27,
    "detected": true,
    "model": "off",
-   "score": 42,
-   "level": "watch",
+   "nearest_logger_m": 121,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 58,
+   "level": "high",
    "error_m": 1999,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 20.2
+   "size_error_pct": 20.2,
+   "before": {
+    "detected": true,
+    "score": 42,
+    "level": "watch",
+    "error_m": 1999,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z5",
@@ -4069,12 +5879,23 @@
    "leak_lps": 5.52,
    "detected": true,
    "model": "off",
-   "score": 38,
-   "level": "watch",
+   "nearest_logger_m": 255,
+   "in_hearing_range": true,
+   "noise_heard": false,
+   "score": 70,
+   "level": "critical",
    "error_m": 2554,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 19.7
+   "size_error_pct": 19.7,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 2554,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z5",
@@ -4085,12 +5906,23 @@
    "leak_lps": 2.63,
    "detected": true,
    "model": "off",
-   "score": 38,
+   "nearest_logger_m": 52,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 34,
    "level": "watch",
-   "error_m": 727,
+   "error_m": 52,
    "in_search": true,
-   "suspect_rank": null,
-   "size_error_pct": 41.6
+   "suspect_rank": 4,
+   "size_error_pct": 41.6,
+   "before": {
+    "detected": false,
+    "score": null,
+    "level": null,
+    "error_m": null,
+    "in_search": null,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z5",
@@ -4101,12 +5933,23 @@
    "leak_lps": 2.5,
    "detected": true,
    "model": "off",
-   "score": 32,
+   "nearest_logger_m": 288,
+   "in_hearing_range": true,
+   "noise_heard": false,
+   "score": 42,
    "level": "watch",
    "error_m": 1830,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 17.1
+   "size_error_pct": 17.1,
+   "before": {
+    "detected": true,
+    "score": 42,
+    "level": "watch",
+    "error_m": 1830,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z5",
@@ -4116,7 +5959,17 @@
    "age_h": 29.2,
    "leak_lps": 1.02,
    "detected": false,
-   "model": "off"
+   "model": "off",
+   "nearest_logger_m": 133,
+   "in_hearing_range": true,
+   "before": {
+    "detected": false,
+    "score": null,
+    "level": null,
+    "error_m": null,
+    "in_search": null,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z6",
@@ -4126,7 +5979,17 @@
    "age_h": 18.3,
    "leak_lps": 1.21,
    "detected": false,
-   "model": "off"
+   "model": "off",
+   "nearest_logger_m": 470,
+   "in_hearing_range": false,
+   "before": {
+    "detected": false,
+    "score": null,
+    "level": null,
+    "error_m": null,
+    "in_search": null,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z6",
@@ -4135,8 +5998,25 @@
    "size": "small",
    "age_h": 57.0,
    "leak_lps": 0.84,
-   "detected": false,
-   "model": "off"
+   "detected": true,
+   "model": "off",
+   "nearest_logger_m": 99,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 28,
+   "level": "watch",
+   "error_m": 99,
+   "in_search": true,
+   "suspect_rank": 1,
+   "size_error_pct": null,
+   "before": {
+    "detected": false,
+    "score": null,
+    "level": null,
+    "error_m": null,
+    "in_search": null,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z6",
@@ -4145,8 +6025,25 @@
    "size": "small",
    "age_h": 17.0,
    "leak_lps": 1.14,
-   "detected": false,
-   "model": "off"
+   "detected": true,
+   "model": "off",
+   "nearest_logger_m": 306,
+   "in_hearing_range": false,
+   "noise_heard": true,
+   "score": 34,
+   "level": "watch",
+   "error_m": 442,
+   "in_search": true,
+   "suspect_rank": 3,
+   "size_error_pct": 16.7,
+   "before": {
+    "detected": false,
+    "score": null,
+    "level": null,
+    "error_m": null,
+    "in_search": null,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z6",
@@ -4157,12 +6054,23 @@
    "leak_lps": 1.16,
    "detected": true,
    "model": "off",
-   "score": 32,
-   "level": "watch",
-   "error_m": 898,
+   "nearest_logger_m": 64,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 48,
+   "level": "high",
+   "error_m": 64,
    "in_search": true,
-   "suspect_rank": null,
-   "size_error_pct": null
+   "suspect_rank": 2,
+   "size_error_pct": null,
+   "before": {
+    "detected": true,
+    "score": 32,
+    "level": "watch",
+    "error_m": 898,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z6",
@@ -4172,7 +6080,17 @@
    "age_h": 43.0,
    "leak_lps": 1.05,
    "detected": false,
-   "model": "off"
+   "model": "off",
+   "nearest_logger_m": 338,
+   "in_hearing_range": false,
+   "before": {
+    "detected": false,
+    "score": null,
+    "level": null,
+    "error_m": null,
+    "in_search": null,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z6",
@@ -4183,12 +6101,23 @@
    "leak_lps": 5.38,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 238,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 70,
    "level": "critical",
    "error_m": 244,
    "in_search": true,
    "suspect_rank": 1,
-   "size_error_pct": 11.5
+   "size_error_pct": 11.5,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 244,
+    "in_search": true,
+    "suspect_rank": 1
+   }
   },
   {
    "zone": "Z6",
@@ -4197,14 +6126,18 @@
    "size": "medium",
    "age_h": 26.5,
    "leak_lps": 2.92,
-   "detected": true,
+   "detected": false,
    "model": "off",
-   "score": 38,
-   "level": "watch",
-   "error_m": 1840,
-   "in_search": false,
-   "suspect_rank": null,
-   "size_error_pct": 23.5
+   "nearest_logger_m": 505,
+   "in_hearing_range": false,
+   "before": {
+    "detected": false,
+    "score": null,
+    "level": null,
+    "error_m": null,
+    "in_search": null,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z6",
@@ -4215,12 +6148,23 @@
    "leak_lps": 1.16,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 306,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 38,
    "level": "watch",
    "error_m": 952,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 33.5
+   "size_error_pct": 33.5,
+   "before": {
+    "detected": true,
+    "score": 38,
+    "level": "watch",
+    "error_m": 952,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z7",
@@ -4229,8 +6173,25 @@
    "size": "small",
    "age_h": 85.0,
    "leak_lps": 0.81,
-   "detected": false,
-   "model": "off"
+   "detected": true,
+   "model": "off",
+   "nearest_logger_m": 142,
+   "in_hearing_range": true,
+   "noise_heard": true,
+   "score": 58,
+   "level": "high",
+   "error_m": 142,
+   "in_search": true,
+   "suspect_rank": 1,
+   "size_error_pct": 16.3,
+   "before": {
+    "detected": true,
+    "score": 42,
+    "level": "watch",
+    "error_m": 446,
+    "in_search": true,
+    "suspect_rank": 2
+   }
   },
   {
    "zone": "Z7",
@@ -4241,12 +6202,23 @@
    "leak_lps": 5.56,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 203,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 70,
    "level": "critical",
    "error_m": 3937,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 7.8
+   "size_error_pct": 7.8,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 3937,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z7",
@@ -4257,12 +6229,23 @@
    "leak_lps": 6.45,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 364,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 70,
    "level": "critical",
    "error_m": 1456,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 0.6
+   "size_error_pct": 0.6,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 1456,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z7",
@@ -4273,12 +6256,23 @@
    "leak_lps": 4.36,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 198,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 70,
    "level": "critical",
    "error_m": 325,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 5.2
+   "size_error_pct": 5.2,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 325,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z7",
@@ -4289,12 +6283,23 @@
    "leak_lps": 4.58,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 83,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 70,
    "level": "critical",
    "error_m": 1502,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 2.8
+   "size_error_pct": 2.8,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 1502,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z7",
@@ -4305,12 +6310,23 @@
    "leak_lps": 2.69,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 655,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 56,
    "level": "high",
    "error_m": 1931,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 12.0
+   "size_error_pct": 12.0,
+   "before": {
+    "detected": true,
+    "score": 56,
+    "level": "high",
+    "error_m": 1931,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z7",
@@ -4321,12 +6337,23 @@
    "leak_lps": 2.56,
    "detected": true,
    "model": "off",
-   "score": 44,
-   "level": "watch",
+   "nearest_logger_m": 1272,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 56,
+   "level": "high",
    "error_m": 3782,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 6.8
+   "size_error_pct": 6.8,
+   "before": {
+    "detected": true,
+    "score": 56,
+    "level": "high",
+    "error_m": 3782,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z7",
@@ -4337,12 +6364,23 @@
    "leak_lps": 2.03,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 230,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 44,
    "level": "watch",
    "error_m": 3971,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 16.2
+   "size_error_pct": 16.2,
+   "before": {
+    "detected": true,
+    "score": 44,
+    "level": "watch",
+    "error_m": 3971,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z8",
@@ -4353,12 +6391,23 @@
    "leak_lps": 2.11,
    "detected": true,
    "model": "off",
-   "score": 56,
+   "nearest_logger_m": 419,
+   "in_hearing_range": false,
+   "noise_heard": false,
+   "score": 48,
    "level": "high",
    "error_m": 3674,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 15.9
+   "size_error_pct": 15.9,
+   "before": {
+    "detected": true,
+    "score": 48,
+    "level": "high",
+    "error_m": 3674,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z8",
@@ -4369,12 +6418,23 @@
    "leak_lps": 6.72,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 476,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 70,
    "level": "critical",
    "error_m": 308,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 2.4
+   "size_error_pct": 2.4,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 308,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z8",
@@ -4385,12 +6445,23 @@
    "leak_lps": 2.09,
    "detected": true,
    "model": "off",
-   "score": 52,
+   "nearest_logger_m": 290,
+   "in_hearing_range": true,
+   "noise_heard": false,
+   "score": 48,
    "level": "high",
    "error_m": 1185,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 2.1
+   "size_error_pct": 2.1,
+   "before": {
+    "detected": true,
+    "score": 48,
+    "level": "high",
+    "error_m": 1185,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z8",
@@ -4399,14 +6470,18 @@
    "size": "small",
    "age_h": 46.0,
    "leak_lps": 1.01,
-   "detected": true,
+   "detected": false,
    "model": "off",
-   "score": 38,
-   "level": "watch",
-   "error_m": 739,
-   "in_search": true,
-   "suspect_rank": null,
-   "size_error_pct": 0.6
+   "nearest_logger_m": 400,
+   "in_hearing_range": false,
+   "before": {
+    "detected": false,
+    "score": null,
+    "level": null,
+    "error_m": null,
+    "in_search": null,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z8",
@@ -4417,12 +6492,23 @@
    "leak_lps": 4.92,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 292,
+   "in_hearing_range": true,
+   "noise_heard": false,
    "score": 70,
    "level": "critical",
    "error_m": 1349,
    "in_search": false,
    "suspect_rank": null,
-   "size_error_pct": 11.2
+   "size_error_pct": 11.2,
+   "before": {
+    "detected": true,
+    "score": 70,
+    "level": "critical",
+    "error_m": 1349,
+    "in_search": false,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z8",
@@ -4432,7 +6518,17 @@
    "age_h": 29.6,
    "leak_lps": 0.89,
    "detected": false,
-   "model": "off"
+   "model": "off",
+   "nearest_logger_m": 143,
+   "in_hearing_range": true,
+   "before": {
+    "detected": false,
+    "score": null,
+    "level": null,
+    "error_m": null,
+    "in_search": null,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z8",
@@ -4443,12 +6539,23 @@
    "leak_lps": 1.13,
    "detected": true,
    "model": "off",
+   "nearest_logger_m": 385,
+   "in_hearing_range": false,
+   "noise_heard": false,
    "score": 48,
    "level": "high",
    "error_m": 1207,
    "in_search": true,
    "suspect_rank": null,
-   "size_error_pct": 39.5
+   "size_error_pct": 39.5,
+   "before": {
+    "detected": true,
+    "score": 48,
+    "level": "high",
+    "error_m": 1207,
+    "in_search": true,
+    "suspect_rank": null
+   }
   },
   {
    "zone": "Z8",
@@ -4458,7 +6565,17 @@
    "age_h": 22.6,
    "leak_lps": 0.83,
    "detected": false,
-   "model": "off"
+   "model": "off",
+   "nearest_logger_m": 376,
+   "in_hearing_range": false,
+   "before": {
+    "detected": false,
+    "score": null,
+    "level": null,
+    "error_m": null,
+    "in_search": null,
+    "suspect_rank": null
+   }
   }
  ]
 }

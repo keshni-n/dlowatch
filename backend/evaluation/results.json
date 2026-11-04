@@ -1,19 +1,19 @@
 {
   "run": {
-    "date": "2026-11-02 21:12",
+    "date": "2026-11-04 15:00",
     "seed": 7,
     "per_zone": 8,
     "zones": 8,
-    "ruleset": "wl-1.3",
+    "ruleset": "wl-1.5",
     "scenarios": 352,
-    "seconds": 123,
+    "seconds": 328,
     "noise": "water use +-5%, pressure sensors +-1 mm (same as the training data)"
   },
   "detection": {
     "slow": {
       "n": 64,
-      "detected": 62,
-      "rate": 0.969,
+      "detected": 61,
+      "rate": 0.953,
       "by_age": {
         "under 1 day": {
           "n": 7,
@@ -22,8 +22,8 @@
         },
         "1 to 2 days": {
           "n": 20,
-          "detected": 20,
-          "rate": 1.0
+          "detected": 19,
+          "rate": 0.95
         },
         "over 2 days": {
           "n": 37,
@@ -40,14 +40,14 @@
     },
     "all_leaks": {
       "n": 128,
-      "rate": 0.984
+      "rate": 0.977
     }
   },
   "false_alarms": {
     "normal_day": {
       "n": 64,
-      "alerts": 1,
-      "rate": 0.016
+      "alerts": 2,
+      "rate": 0.031
     },
     "faulty_meter": {
       "n": 64,
@@ -56,15 +56,15 @@
       "by_fault": {
         "spikes": {
           "n": 11,
-          "false_alarms": 0
+          "false_alarms": 1
         },
         "stuck": {
           "n": 9,
-          "false_alarms": 0
+          "false_alarms": 1
         },
         "drift": {
           "n": 7,
-          "false_alarms": 1
+          "false_alarms": 0
         },
         "gaps": {
           "n": 10,
@@ -76,35 +76,149 @@
         },
         "offline": {
           "n": 12,
-          "false_alarms": 1
+          "false_alarms": 0
         }
       }
     }
   },
   "location": {
     "with_model": {
-      "alerts": 126,
-      "median_error_m": 396,
-      "p80_error_m": 670,
-      "pipe_in_search_area": 0.897,
-      "suspect_top1": 0.214,
-      "suspect_top3": 0.437,
-      "suspect_top5": 0.556,
-      "size_error_median_pct": 1.7,
+      "alerts": 125,
+      "median_error_m": 308,
+      "p80_error_m": 609,
+      "pipe_in_search_area": 0.928,
+      "suspect_top1": 0.272,
+      "suspect_top3": 0.504,
+      "suspect_top5": 0.656,
+      "size_error_median_pct": 1.6,
       "leaks": 128
     },
     "without_model": {
-      "alerts": 52,
-      "median_error_m": 944,
-      "p80_error_m": 1840,
-      "pipe_in_search_area": 0.596,
-      "suspect_top1": 0.058,
-      "suspect_top3": 0.192,
-      "suspect_top5": 0.25,
-      "size_error_median_pct": 12.0,
+      "alerts": 55,
+      "median_error_m": 713,
+      "p80_error_m": 1999,
+      "pipe_in_search_area": 0.618,
+      "suspect_top1": 0.145,
+      "suspect_top3": 0.309,
+      "suspect_top5": 0.364,
+      "size_error_median_pct": 15.9,
       "leaks": 64
     },
-    "without_model_detection": 0.812
+    "without_model_detection": 0.859
+  },
+  "acoustic": {
+    "hearing_range_m": 300,
+    "loggers": 448,
+    "pipe_coverage_pct": 49,
+    "before_ruleset": "wl-1.3",
+    "after_ruleset": "wl-1.5",
+    "groups": [
+      {
+        "label": "All leaks",
+        "leaks": 128,
+        "before": {
+          "alerts": 125,
+          "median_error_m": 384,
+          "pipe_in_search_area": 0.904,
+          "suspect_top1": 0.216,
+          "suspect_top3": 0.448,
+          "detected": 0.977
+        },
+        "after": {
+          "alerts": 125,
+          "median_error_m": 308,
+          "pipe_in_search_area": 0.928,
+          "suspect_top1": 0.272,
+          "suspect_top3": 0.504,
+          "detected": 0.977,
+          "noise_heard": 0.192
+        }
+      },
+      {
+        "label": "Slow leaks running 2+ nights",
+        "leaks": 37,
+        "before": {
+          "alerts": 35,
+          "median_error_m": 428,
+          "pipe_in_search_area": 0.829,
+          "suspect_top1": 0.171,
+          "suspect_top3": 0.429,
+          "detected": 0.946
+        },
+        "after": {
+          "alerts": 35,
+          "median_error_m": 172,
+          "pipe_in_search_area": 0.914,
+          "suspect_top1": 0.343,
+          "suspect_top3": 0.629,
+          "detected": 0.946,
+          "noise_heard": 0.514
+        }
+      },
+      {
+        "label": "Slow leaks running 2+ nights, within hearing range of a logger",
+        "leaks": 23,
+        "before": {
+          "alerts": 21,
+          "median_error_m": 384,
+          "pipe_in_search_area": 0.81,
+          "suspect_top1": 0.143,
+          "suspect_top3": 0.429,
+          "detected": 0.913
+        },
+        "after": {
+          "alerts": 21,
+          "median_error_m": 167,
+          "pipe_in_search_area": 0.952,
+          "suspect_top1": 0.429,
+          "suspect_top3": 0.762,
+          "detected": 0.913,
+          "noise_heard": 0.81
+        }
+      },
+      {
+        "label": "Bursts (under 6 hours old, loggers have not recorded yet)",
+        "leaks": 64,
+        "before": {
+          "alerts": 64,
+          "median_error_m": 316,
+          "pipe_in_search_area": 0.969,
+          "suspect_top1": 0.266,
+          "suspect_top3": 0.5,
+          "detected": 1.0
+        },
+        "after": {
+          "alerts": 64,
+          "median_error_m": 316,
+          "pipe_in_search_area": 0.969,
+          "suspect_top1": 0.266,
+          "suspect_top3": 0.5,
+          "detected": 1.0,
+          "noise_heard": 0.047
+        }
+      },
+      {
+        "label": "Rules only (model switched off)",
+        "leaks": 64,
+        "before": {
+          "alerts": 51,
+          "median_error_m": 994,
+          "pipe_in_search_area": 0.569,
+          "suspect_top1": 0.059,
+          "suspect_top3": 0.216,
+          "detected": 0.797
+        },
+        "after": {
+          "alerts": 55,
+          "median_error_m": 713,
+          "pipe_in_search_area": 0.618,
+          "suspect_top1": 0.145,
+          "suspect_top3": 0.309,
+          "detected": 0.859,
+          "noise_heard": 0.236
+        }
+      }
+    ]
   },
   "public_reports": {
     "spam_one_phone": {

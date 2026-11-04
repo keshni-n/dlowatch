@@ -623,6 +623,7 @@ def refresh():
 
 
 LOUD_DB = 4.0     # a night counts as loud when it is this many dB above the logger's usual level
+STEADY_DB = 3.0   # loud nights in a run must be this close to each other (leak noise is steady)
 LOGGER_CACHE = {"version": None, "levels": {}, "causes": {}}
 
 
@@ -652,8 +653,11 @@ def logger_state(lid):
     last = rows[-1]["db"]
     loud = [r["db"] - usual >= LOUD_DB for r in rows[-3:]]
     streak = 0
-    for x in reversed(loud):
-        if not x:
+    for i in range(len(loud) - 1, -1, -1):
+        if not loud[i]:
+            break
+        # leak noise is steady: a loud night only extends the run if it is close to the next one
+        if streak and abs(rows[-3 + i]["db"] - rows[-3 + i + 1]["db"]) > STEADY_DB:
             break
         streak += 1
     return {"last_db": last, "usual_db": round(usual, 1), "change_db": round(last - usual, 1),
@@ -666,15 +670,26 @@ def zone_loggers(zone):
     return sorted(out, key=lambda x: -x["change_db"])
 
 
-def noise_area(zone, rs):
+def heard_by_loggers(a):
+    """Had the loggers recorded this leak yet? They need it running through the last 2 nights."""
+    return a["kind"] != "burst" and a.get("started", NOW) <= logger_nights()[-2] - 3600
+
+
+def noise_area(zone, rs, base=None):
     """
     Where the noisy loggers point: the loudest noisy logger, plus noisy loggers within group_radius_m of it,
     centred on them weighted by how much louder they are. None when no logger in the zone is noisy.
+    With base (the meters' or model's search), only loggers inside or near those areas are used, so a noisy
+    logger elsewhere in the zone (another leak, or street noise) does not pull the search away.
     """
     if not (rs.get("points") or {}).get("acoustic"):
         return None
     cfg = rs.get("acoustic_search") or {}
     noisy = [x for x in zone_loggers(zone) if x["status"] == "noisy"]
+    if base and base.get("areas"):
+        margin = cfg.get("match_margin_m", 300)
+        noisy = [x for x in noisy if any(km(ar["centre_latlon"][0], ar["centre_latlon"][1], x["lat"], x["lon"]) * 1000
+                                         <= ar["radius_m"] + margin for ar in base["areas"] if ar.get("area") != "N1")]
     if not noisy:
         return None
     top = noisy[0]
@@ -696,7 +711,9 @@ def apply_loggers(a):
         return
     rs = scoring.get(a.get("ruleset", RULESET))
     base = a.get("search_meters") or a.get("search") or {}
-    na = noise_area(a["zone"], rs)
+    # 2 steady loud nights already show the loggers heard it, so only fresh bursts are left out here;
+    # the start time is an estimate and is only used for the quiet-logger ranking
+    na = noise_area(a["zone"], rs, base) if a["kind"] != "burst" else None
     if not na:
         if a.get("search_meters"):
             a["search"] = a.pop("search_meters")
@@ -974,7 +991,7 @@ def suspects(a, keep_all=False):
     weight = {}
     rs = scoring.get(a.get("ruleset", RULESET))
     qcfg = rs.get("acoustic_search") if (rs.get("points") or {}).get("acoustic") else None
-    quiet = quiet_logger_points(a["zone"], rs) if qcfg else None
+    quiet = quiet_logger_points(a["zone"], rs) if qcfg and heard_by_loggers(a) else None
     for ar in areas:
         p_area = ar["probability"] if ar.get("probability") is not None else 1.0
         for pid in ar["pipes"]:
