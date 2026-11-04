@@ -26,6 +26,18 @@ import { LeakMap, MapCircle, MapPoint } from '../shared/leak-map';
               <div class="small">Walk the orange pipes{{ j.search_radius_m ? ', search area about ' + j.search_radius_m + ' m around the centre' : '' }}.</div>
             </div>
           </div>
+          @if (j.loggers?.length) {
+            <div class="card stack logs">
+              <div class="label">Noise loggers hear it</div>
+              @for (l of j.loggers; track l.id) {
+                <div class="row between small">
+                  <span><b class="mono">{{ l.id }}</b><span class="muted"> · junction {{ l.junction }}</span></span>
+                  <span class="mono">+{{ l.change_db.toFixed(0) }} dB, {{ l.loud_nights }} nights</span>
+                </div>
+              }
+              <div class="tiny muted">Purple on the map. Start listening on the valves closest to the loudest logger.</div>
+            </div>
+          }
           @if (j.suspects.length) {
             <div class="card stack sus">
               <div class="row between">
@@ -111,6 +123,7 @@ import { LeakMap, MapCircle, MapPoint } from '../shared/leak-map';
     .tall { min-height: 56px; padding: 0 8px; font-size: 14px; }
     .found { margin-top: 4px; gap: 8px; }
     .sus { gap: 6px; }
+    .logs { gap: 6px; }
     .seg { display: flex; background: var(--chip); border-radius: 99px; padding: 3px; }
     .seg button { border: none; background: transparent; border-radius: 99px; padding: 0 10px; min-height: 32px; font-size: 12px; font-weight: 600; color: var(--text-2); cursor: pointer; }
     .seg button[aria-pressed="true"] { background: var(--inverse-bg); color: var(--inverse-text); }
@@ -154,7 +167,11 @@ export class CrewJobPage {
     const j = this.j();
     return j?.latlon ? [{ latlon: j.latlon, radius_m: j.search_radius_m ?? 150, color: '#E8590C', label: 'Search area' }] : [];
   });
-  me = computed<MapPoint[]>(() => (this.here() ? [{ latlon: this.here()!, color: '#0B5FA5', size: 8, label: 'You' }] : []));
+  me = computed<MapPoint[]>(() => {
+    const pts: MapPoint[] = (this.j()?.loggers ?? []).map(l => ({ latlon: l.latlon, color: '#6D28D9', size: 7, ring: '#0F1B24', label: `${l.id}: leak noise +${l.change_db.toFixed(0)} dB` }));
+    if (this.here()) pts.push({ latlon: this.here()!, color: '#0B5FA5', size: 8, label: 'You' });
+    return pts;
+  });
   directions = computed(() => {
     const ll = this.j()?.latlon;
     return ll ? `https://www.google.com/maps/dir/?api=1&destination=${ll[0]},${ll[1]}` : '#';

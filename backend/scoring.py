@@ -184,4 +184,9 @@ def score(signals, rs):
     if public_only and cap is not None and total > cap:
         total = cap
         notes.append("Public reports alone can raise a zone to Watch, never higher.")
+    acoustic_only = scoring_codes and all(c.startswith("AC") for c in scoring_codes)
+    cap = rs["caps"].get("acoustic_only_max")
+    if acoustic_only and cap is not None and total > cap:
+        total = cap
+        notes.append("Noise loggers alone can raise a zone to Watch, never higher.")
     return {"score": total, "level": band(total, rs), "trace": rows, "notes": notes}

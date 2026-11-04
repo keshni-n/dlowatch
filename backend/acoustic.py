@@ -20,6 +20,7 @@ ACOUSTIC_DEFAULT = {
     "hearing_range_m": 300,          # a logger hears a leak up to about this far away
 }
 
+MAIN_ROADS = {"trunk", "primary", "secondary"}
 _KX = 111320 * math.cos(math.radians(-20.1))   # metres per degree of longitude around Mauritius
 _KY = 110540                                    # metres per degree of latitude
 
@@ -58,6 +59,13 @@ def place_loggers(geo, zones, settings):
         p = f["properties"]
         pipe_m[p.get("zone")] = pipe_m.get(p.get("zone"), 0) + (p.get("length_m") or 0)
 
+    roads = {}
+    for f in geo["pipes"]["features"]:
+        p = f["properties"]
+        if p.get("zone") in zones:
+            lon, lat = np.array(f["geometry"]["coordinates"]).reshape(-1, 2).mean(axis=0)
+            roads.setdefault(p["zone"], []).append((*xy(lat, lon), p.get("road_type") or ""))
+
     loggers = {}
     for z in sorted(zones):
         nodes = sorted(by_zone.get(z, []))
@@ -77,7 +85,10 @@ def place_loggers(geo, zones, settings):
         for k, idx in enumerate(chosen, 1):
             jid, lat, lon = nodes[idx]
             lid = f"AL-{z}-{k:02d}"
-            loggers[lid] = {"id": lid, "zone": z, "junction": jid, "lat": round(lat, 6), "lon": round(lon, 6)}
+            x, y = xy(lat, lon)
+            road = min(roads.get(z, [(x, y, "")]), key=lambda r: (r[0] - x) ** 2 + (r[1] - y) ** 2)[2]
+            loggers[lid] = {"id": lid, "zone": z, "junction": jid, "lat": round(lat, 6), "lon": round(lon, 6),
+                            "main_road": road.split("_")[0] in MAIN_ROADS}
     return loggers
 
 
@@ -103,3 +114,72 @@ def pipe_coverage(geo, loggers, settings):
     per_zone = {z: round(100 * cov.get(z, 0) / tot[z]) for z in sorted(tot) if tot[z]}
     overall = round(100 * sum(cov.values()) / max(1, sum(tot.values())))
     return {"zones": per_zone, "overall": overall}
+
+
+# ---------------------------------------------------------------- night noise readings
+# Simulated, like the flow and pressure readings. What a logger records each night:
+#   background  a quiet street at 3 am: about 15 to 23 dB, a few dB more next to a main road
+#   wobble      +-1.5 dB from night to night
+#   one-offs    about 1 night in 50 a logger picks up something else (a night pump, roadworks, a tank filling):
+#               6 to 14 dB louder for that one night only
+#   leaks       a leak hisses at about 32 dB + 6 dB for every tenfold more water at the pipe. The sound fades
+#               along the pipe so that a medium leak at the hearing range is as loud as the background.
+#               A slow leak gets louder over its first day, like its flow.
+ONE_OFF_CHANCE = 0.02
+
+
+def leak_source_db(flow_lps):
+    return 32.0 + 6.0 * math.log10(max(flow_lps, 0.05))
+
+
+def fade_db_per_m(settings):
+    """A medium leak (about 2 L/s) at the hearing range is as loud as an average background (19 dB)."""
+    return (leak_source_db(2.0) - 19.0) / settings["hearing_range_m"]
+
+
+def _add_db(a, b):
+    """Two sounds together: add their power, not their dB."""
+    return 10 * math.log10(10 ** (a / 10) + 10 ** (b / 10))
+
+
+def night_levels(loggers, leaks, nights, settings, seed_of):
+    """
+    One level per logger per night. nights: list of 3 am times. leaks: the simulated leaks, each with
+    zone, latlon, flow_lps, kind, start, end. Returns {logger_id: [{"night": t, "db": level}, ...]} oldest first,
+    plus {logger_id: {night: cause}} for testing only ("leak:<id>" or "one-off"); the app never shows the causes.
+    """
+    fade = fade_db_per_m(settings)
+    by_zone = {}
+    for lk in leaks:
+        if lk.get("latlon"):
+            by_zone.setdefault(lk["zone"], []).append((lk, xy(*lk["latlon"])))
+    out, causes = {}, {}
+    for lid, lg in loggers.items():
+        base = 15.0 + (seed_of(lid) % 800) / 100.0 + (3.0 if lg.get("main_road") else 0.0)
+        x, y = xy(lg["lat"], lg["lon"])
+        near = []
+        for lk, (lx, ly) in by_zone.get(lg["zone"], []):
+            d = math.hypot(lx - x, ly - y)
+            if d <= 3 * settings["hearing_range_m"]:
+                near.append((lk, d))
+        rows, why = [], {}
+        for t in nights:
+            r = np.random.default_rng(seed_of(f"{lid}:{t}"))
+            db = base + float(r.normal(0, 1.5))
+            if r.random() < ONE_OFF_CHANCE:
+                db += float(r.uniform(6, 14))
+                why[t] = "one-off"
+            for lk, d in near:
+                end = lk.get("end") or 10 ** 12
+                if not (lk["start"] <= t < end):
+                    continue
+                q = lk["flow_lps"]
+                if lk.get("kind") == "slow":
+                    q *= min(1.0, max(0.25, (t - lk["start"]) / 86400))
+                level = leak_source_db(q) - fade * d
+                db = _add_db(db, level)
+                if level > base - 3:
+                    why[t] = f"leak:{lk['id']}"
+            rows.append({"night": int(t), "db": round(db, 1)})
+        out[lid], causes[lid] = rows, why
+    return out, causes
