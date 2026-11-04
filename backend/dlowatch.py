@@ -622,6 +622,44 @@ def refresh():
         return CACHE
 
 
+LOUD_DB = 4.0     # a night counts as loud when it is this many dB above the logger's usual level
+LOGGER_CACHE = {"version": None, "levels": {}, "causes": {}}
+
+
+def logger_nights(days=HISTORY_DAYS):
+    """3 am of each of the last few nights whose 2 to 4 am recording is finished, oldest first."""
+    last = next_3am(NOW) - 86400
+    if last + 3600 > NOW:
+        last -= 86400
+    return [last - 86400 * i for i in range(days - 1, -1, -1)]
+
+
+def logger_levels():
+    """Noise level per logger per night. Rebuilt when leaks change or a new night is recorded."""
+    with LOCK:
+        nights = logger_nights()
+        key = (VERSION["n"], nights[-1])
+        if LOGGER_CACHE["version"] != key:
+            levels, causes = acoustic.night_levels(LOGGERS, list(LEAKS.values()), nights, ACOUSTIC, seed_of)
+            LOGGER_CACHE.update(version=key, levels=levels, causes=causes)
+        return LOGGER_CACHE["levels"]
+
+
+def logger_state(lid):
+    """Last night against the usual level (median of the nights before the last 3)."""
+    rows = logger_levels()[lid]
+    usual = float(np.median([r["db"] for r in rows[:-3]]))
+    last = rows[-1]["db"]
+    loud = [r["db"] - usual >= LOUD_DB for r in rows[-3:]]
+    streak = 0
+    for x in reversed(loud):
+        if not x:
+            break
+        streak += 1
+    return {"last_db": last, "usual_db": round(usual, 1), "change_db": round(last - usual, 1),
+            "loud_nights": streak, "status": "noisy" if streak >= 2 else "loud once" if streak == 1 else "quiet"}
+
+
 def meter_trust(mid):
     c = refresh()
     d = c["flow"].get(mid) or c["pressure"].get(mid)
@@ -1780,9 +1818,19 @@ def meters_endpoint():
 @router.get("/loggers", dependencies=[Depends(STAFF_ONLY)])
 def loggers_endpoint(zone: Optional[str] = None):
     """Acoustic noise loggers: where they are and how much of the pipe network they can hear."""
-    items = [lg for lg in LOGGERS.values() if not zone or lg["zone"] == zone]
+    items = [{**lg, **logger_state(lid)} for lid, lg in LOGGERS.items() if not zone or lg["zone"] == zone]
+    st = Counter(i["status"] for i in items)
     return {"loggers": items, "hearing_range_m": ACOUSTIC["hearing_range_m"], "coverage": LOGGER_COVERAGE,
-            "summary": {"total": len(items)}}
+            "summary": {"total": len(items), "noisy": st["noisy"], "loud_once": st["loud once"], "quiet": st["quiet"]}}
+
+
+@router.get("/loggers/{lid}", dependencies=[Depends(STAFF_ONLY)])
+def logger_detail(lid: str):
+    """One logger: where it is and its noise level for each of the last 14 nights."""
+    if lid not in LOGGERS:
+        raise HTTPException(404, "Unknown logger")
+    return {**LOGGERS[lid], **logger_state(lid), "nights": logger_levels()[lid],
+            "zone_name": ZONE_NAMES[LOGGERS[lid]["zone"]]}
 
 
 @router.get("/meters/{mid}", dependencies=[Depends(STAFF_ONLY)])
