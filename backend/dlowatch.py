@@ -1894,7 +1894,6 @@ def crew_result(jid: str, body: ResultIn, user=Depends(CREW_ONLY)):
         return job_view(j)
 
 
-
 # ============================================================== map data
 @router.get("/map/zones", dependencies=[Depends(STAFF_ONLY)])
 def map_zones():
@@ -1951,5 +1950,176 @@ def demo_leak(body: DemoLeakIn):
         return {"alert": None, "model_status": None, "message": msg}
     return {"alert": aid, "model_status": ALERTS[aid]["model_status"], "detail": public_alert_view(ALERTS[aid])}
 
+
+# ---------------------------------------------------------------- system status (rules + model)
+@router.get("/system/status", dependencies=[Depends(STAFF_ONLY)])
+def system_status():
+    err = MODEL["last_error"]
+    return {"model": {"status": model_status(), "enabled": MODEL["enabled"], "timeout_s": MODEL["timeout_s"],
+                      "zones_with_model": sorted(api.MODELS), "last_error": err[1] if err else None},
+            "ruleset": {"active": RULESET,
+                        "available": [{"version": v, "description": r.get("description"), "published": r.get("published")}
+                                      for v, r in sorted(scoring.RULESETS.items(), key=lambda kv: scoring._version_key(kv[0]))]}}
+
+
+@router.get("/repairs/priority", dependencies=[Depends(STAFF_ONLY)])
+def repairs_priority():
+    rows = repair_items()
+    return {"items": rows, "weights": PRIORITY["weights"],
+            "household_use_litres_per_day": PRIORITY["household_use_litres_per_day"],
+            "totals": {"leaks": len(rows), "m3_per_day": round(sum(r["water_lost_m3_per_day"] or 0 for r in rows)),
+                       "households": sum(r["households_est"] or 0 for r in rows)}}
+
+
+REPORT_DEFAULT = {"water_cost_rs_per_m3": None, "currency": "Rs", "default_days": 7}
+
+
+def report_settings():
+    return load_settings("report.json", REPORT_DEFAULT)
+
+
+@router.get("/report", dependencies=[Depends(STAFF_ONLY)])
+def water_report(days: Optional[int] = None):
+    """Water lost, water saved, money and worst zones over the last few days (default 7)."""
+    cfg = report_settings()
+    days = max(1, min(days or cfg["default_days"] or 7, HISTORY_DAYS - 1))
+    start = NOW - days * 86400
+    c = refresh()
+    zones, daily = [], {}
+    for z in api.ZONES:
+        fc = c["flow"][api.ZONES[z]["inlet"]]
+        t, v = fc["t"], fc["v"]
+        sel = (t >= start) & (t < NOW)
+        hours = ((t[sel] + 4 * 3600) // 3600) % 24
+        expected = ZONE_PROPS[z]["avg_demand_lps"] * PATTERN[hours]
+        ok = ~np.isnan(v[sel])
+        water_in = float(np.sum(v[sel][ok])) * STEP_S / 1000
+        exp_m3 = float(np.sum(expected[ok])) * STEP_S / 1000
+        coverage = float(ok.mean()) if len(ok) else 0.0
+        day = ((t[sel] + 4 * 3600) // 86400)[ok]
+        extra = (v[sel][ok] - expected[ok]) * STEP_S / 1000
+        for d_, x in zip(day, extra):
+            daily[int(d_)] = daily.get(int(d_), 0.0) + float(x)
+        alerts_z = [a for a in ALERTS.values() if a["zone"] == z and a["created"] >= start]
+        zones.append({"zone": z, "name": ZONE_NAMES[z], "water_in_m3": round(water_in), "expected_m3": round(exp_m3),
+                      "lost_m3": round(max(0.0, water_in - exp_m3)), "lost_pct": round((water_in - exp_m3) / exp_m3 * 100, 1) if exp_m3 else 0,
+                      "data_coverage_pct": round(coverage * 100, 1), "alerts": len(alerts_z),
+                      "open_leaks": len([a for a in ALERTS.values() if a["zone"] == z and a["status"] == "open" and a["kind"] != "public"])})
+    zones.sort(key=lambda r: -r["lost_m3"])
+    fixed = []
+    for a in ALERTS.values():
+        j = JOBS.get(a.get("job")) if a.get("job") else None
+        if a["status"] == "resolved" and j and j.get("outcome") == "leak_found" and (a.get("resolved") or 0) >= start - 30 * 86400:
+            per_day = (a.get("search") or {}).get("m3_day") or 0
+            since = max(a["resolved"], start)
+            fixed.append({"alert": a["id"], "zone": a["zone"], "zone_name": ZONE_NAMES[a["zone"]], "fixed": a["resolved"],
+                          "m3_per_day": per_day, "saved_m3_in_period": round(per_day * max(0, NOW - since) / 86400),
+                          "cause": j.get("cause"), "crew": CREWS[j["crew_id"]]["name"]})
+    open_rows = repair_items()
+    total_in = sum(z["water_in_m3"] for z in zones)
+    total_exp = sum(z["expected_m3"] for z in zones)
+    lost = sum(z["lost_m3"] for z in zones)
+    saved = sum(f["saved_m3_in_period"] for f in fixed)
+    still = round(sum(r["water_lost_m3_per_day"] or 0 for r in open_rows))
+    cost = cfg.get("water_cost_rs_per_m3")
+    money = None
+    if isinstance(cost, (int, float)) and cost > 0:
+        money = {"cost_per_m3": cost, "currency": cfg.get("currency", "Rs"), "lost": round(lost * cost),
+                 "saved": round(saved * cost), "still_losing_per_day": round(still * cost)}
+    return {
+        "days": days, "start": start, "end": NOW,
+        "totals": {"water_in_m3": total_in, "expected_m3": total_exp, "lost_m3": lost,
+                   "lost_pct": round((total_in - total_exp) / total_exp * 100, 1) if total_exp else 0,
+                   "saved_m3": saved, "saved_per_day_m3": round(sum(f["m3_per_day"] for f in fixed)),
+                   "still_losing_m3_per_day": still, "open_leaks": len([r for r in open_rows if r["kind"] != "public"]),
+                   "alerts_raised": len([a for a in ALERTS.values() if a["created"] >= start]),
+                   "reports": len([r for r in REPORTS.values() if r["created"] >= start]),
+                   "repairs_done": len(fixed)},
+        "money": money, "money_note": None if money else "The cost of water per m³ has not been set yet.",
+        "zones": zones, "fixed": fixed,
+        "daily": [{"day": d_ * 86400 - 4 * 3600, "lost_m3": round(max(0.0, x))} for d_, x in sorted(daily.items())],
+        "note": "Expected use comes from each zone's normal demand pattern. Lost = water put in minus expected use.",
+    }
+
+
+EVAL_FILE = Path(__file__).with_name("evaluation") / "results.json"
+
+
+def battledim_results():
+    """Test on the public BattLeDIM L-Town benchmark (battledim/evaluate_ltown.py), if it has been run."""
+    folder = EVAL_FILE.parent
+    runs = {}
+    for f in sorted(folder.glob("battledim_2019_wl-*.json")):
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+            runs[d["summary"]["ruleset"]] = d
+        except Exception:
+            continue
+    if not runs:
+        return None
+    newest = max(runs, key=scoring._version_key)
+    locator = None
+    try:
+        lo = json.loads((folder / "battledim_locator.json").read_text(encoding="utf-8"))
+        locator = {k: lo[k] for k in ("trained_on", "training_leaks", "areas", "avg_area_radius_m", "simulated_holdout",
+                                      "validation_2018", "test_2019")}
+    except Exception:
+        pass
+    return {"locator": locator, "network": "BattLeDIM L-Town (782 junctions, 905 pipes, 33 pressure sensors)",
+            "tuned_on": "2018", "tested_on": "2019",
+            "rulesets": {v: r["summary"] for v, r in runs.items()},
+            "newest": newest, "leaks": runs[newest]["leaks"], "method": runs[newest].get("method")}
+
+
+@router.get("/evaluation", dependencies=[Depends(STAFF_ONLY)])
+def evaluation_results():
+    """Latest results of evaluate.py, if it has been run."""
+    try:
+        return {"available": True, **json.loads(EVAL_FILE.read_text(encoding="utf-8")), "battledim": battledim_results()}
+    except FileNotFoundError:
+        return {"available": False, "how": "Run: python evaluate.py (in the backend folder)"}
+    except Exception as e:
+        return {"available": False, "how": f"Results file could not be read: {e}"}
+
+
+@router.post("/system/reset")
+def reset_network(user=Depends(ADMIN_ONLY)):
+    """Admin only: start fresh before a demo. Deletes every alert, public report, crew job, crew result and
+    leak in the network. Accounts, settings and the meters stay. New leaks then start on their own again."""
+    global NOW
+    with LOCK:
+        ALERTS.clear(); REPORTS.clear(); JOBS.clear(); LABELS.clear(); LEAKS.clear()
+        NOW = int(time.time()) // STEP_S * STEP_S
+        LIVE_STATE["last_scan"] = None
+        VERSION["n"] += 1
+    flush()
+    log.warning("Network reset by %s", user["name"])
+    return {"alerts": 0, "reports": 0, "jobs": 0}
+
+
+class ModelSwitch(BaseModel):
+    enabled: bool
+
+
+@router.post("/system/model")
+def switch_model(body: ModelSwitch, user=Depends(ADMIN_ONLY)):
+    """For the demo: switch the anomaly model off to show that alerts still come from the rules."""
+    MODEL["enabled"] = body.enabled
+    log.warning("Anomaly model switched %s by %s", "on" if body.enabled else "off", user["name"])
+    return system_status()
+
+
+@router.get("/model/metrics", dependencies=[Depends(STAFF_ONLY)])
+def model_metrics():
+    path = api.NET / "models" / "metrics.json"
+    return json.loads(path.read_text()) if path.exists() else []
+
+
+# ============================================================== helpers
+def pick_pipe(zone, rng, min_d=0):
+    options = [p for p, z in api.PIPE_ZONE.items()
+               if z == zone and not p.startswith("P_IN") and PIPE.get(p, {}).get("status", "open") == "open"
+               and (PIPE.get(p, {}).get("diameter_mm") or 0) >= min_d and (PIPE.get(p, {}).get("length_m") or 0) > 30]
+    return rng.choice(sorted(options))
 
 
