@@ -1,0 +1,120 @@
+{
+  "run": {
+    "date": "2026-11-02 21:12",
+    "seed": 7,
+    "per_zone": 8,
+    "zones": 8,
+    "ruleset": "wl-1.3",
+    "scenarios": 352,
+    "seconds": 123,
+    "noise": "water use +-5%, pressure sensors +-1 mm (same as the training data)"
+  },
+  "detection": {
+    "slow": {
+      "n": 64,
+      "detected": 62,
+      "rate": 0.969,
+      "by_age": {
+        "under 1 day": {
+          "n": 7,
+          "detected": 7,
+          "rate": 1.0
+        },
+        "1 to 2 days": {
+          "n": 20,
+          "detected": 20,
+          "rate": 1.0
+        },
+        "over 2 days": {
+          "n": 37,
+          "detected": 35,
+          "rate": 0.946
+        }
+      }
+    },
+    "burst": {
+      "n": 64,
+      "detected": 64,
+      "rate": 1.0,
+      "critical": 1.0
+    },
+    "all_leaks": {
+      "n": 128,
+      "rate": 0.984
+    }
+  },
+  "false_alarms": {
+    "normal_day": {
+      "n": 64,
+      "alerts": 1,
+      "rate": 0.016
+    },
+    "faulty_meter": {
+      "n": 64,
+      "alerts": 4,
+      "rate": 0.062,
+      "by_fault": {
+        "spikes": {
+          "n": 11,
+          "false_alarms": 0
+        },
+        "stuck": {
+          "n": 9,
+          "false_alarms": 0
+        },
+        "drift": {
+          "n": 7,
+          "false_alarms": 1
+        },
+        "gaps": {
+          "n": 10,
+          "false_alarms": 1
+        },
+        "reset": {
+          "n": 15,
+          "false_alarms": 1
+        },
+        "offline": {
+          "n": 12,
+          "false_alarms": 1
+        }
+      }
+    }
+  },
+  "location": {
+    "with_model": {
+      "alerts": 126,
+      "median_error_m": 396,
+      "p80_error_m": 670,
+      "pipe_in_search_area": 0.897,
+      "suspect_top1": 0.214,
+      "suspect_top3": 0.437,
+      "suspect_top5": 0.556,
+      "size_error_median_pct": 1.7,
+      "leaks": 128
+    },
+    "without_model": {
+      "alerts": 52,
+      "median_error_m": 944,
+      "p80_error_m": 1840,
+      "pipe_in_search_area": 0.596,
+      "suspect_top1": 0.058,
+      "suspect_top3": 0.192,
+      "suspect_top5": 0.25,
+      "size_error_median_pct": 12.0,
+      "leaks": 64
+    },
+    "without_model_detection": 0.812
+  },
+  "public_reports": {
+    "spam_one_phone": {
+      "n": 16,
+      "grouped": 0
+    },
+    "three_phones": {
+      "n": 16,
+      "grouped": 16,
+      "above_watch": 0
+    }
+  }
+}
