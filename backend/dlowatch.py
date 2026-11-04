@@ -455,3 +455,232 @@ def raw_series(meter_id, days):
     return t, v
 
 
+# ============================================================== cleaning (DQ-01..06)
+DQ_RULES = [
+    {"code": "DQ-01", "name": "Spikes", "looks": "One reading jumps far up or down, then goes back",
+     "fix": "replaced with the median of nearby readings"},
+    {"code": "DQ-02", "name": "Missing readings", "looks": "Gaps when the signal or battery drops",
+     "fix": "gaps up to 30 min filled in a straight line, longer gaps left empty"},
+    {"code": "DQ-03", "name": "Stuck meter", "looks": "Exactly the same number for 3 hours or more",
+     "fix": "readings ignored and the meter marked faulty"},
+    {"code": "DQ-04", "name": "Impossible values", "looks": "Below zero, or far more than the pipe can carry",
+     "fix": "reading dropped"},
+    {"code": "DQ-05", "name": "Drift", "looks": "Slowly reads higher or lower than it should",
+     "fix": "compared with its expected level, trust lowered"},
+    {"code": "DQ-06", "name": "Time problems", "looks": "Duplicate or out of order timestamps",
+     "fix": "duplicates removed, sorted by time"},
+]
+
+
+def clean(meter_id, t, v):
+    m = METERS[meter_id]
+    fixes = Counter()
+    events = []
+    # DQ-06: order and duplicates
+    order = np.argsort(t, kind="stable")
+    if np.any(order != np.arange(len(t))):
+        fixes["DQ-06"] += int(np.sum(order != np.arange(len(t))) // 2) or 1
+    t, v = t[order], v[order]
+    _, first = np.unique(t, return_index=True)
+    dups = len(t) - len(first)
+    if dups:
+        fixes["DQ-06"] += dups
+    t, v = t[first], v[first].astype(float)
+
+    # DQ-04: impossible values
+    if m["type"] == "flow":
+        limit = ZONE_PROPS[m["zone"]]["avg_demand_lps"] * 4
+    else:
+        limit = 150.0
+    bad = (v < 0) | (v > limit)
+    for i in np.where(bad)[0]:
+        events.append({"code": "DQ-04", "t": int(t[i]), "raw": float(v[i]), "action": "dropped"})
+    fixes["DQ-04"] += int(bad.sum())
+    v = np.where(bad, np.nan, v)
+
+    # DQ-01: spikes, against a rolling median of the 7 readings around each point
+    # (skipped when the meter sent nothing at all: it is then marked offline below)
+    if len(v) and not np.all(np.isnan(v)):
+        pad = 3
+        padded = np.pad(v, pad, mode="edge")
+        windows = np.lib.stride_tricks.sliding_window_view(padded, 2 * pad + 1)
+        with np.errstate(all="ignore"):
+            med = np.nanmedian(windows, axis=1)
+            dev = np.abs(v - med)
+            mad = np.nanmedian(np.abs(windows - med[:, None]), axis=1)
+            scale = np.maximum(mad * 6, np.nanmedian(np.abs(v)) * 0.25)
+        spike = (dev > scale) & ~np.isnan(v)
+        for i in np.where(spike)[0]:
+            events.append({"code": "DQ-01", "t": int(t[i]), "raw": float(v[i]), "action": f"replaced with {med[i]:.2f}"})
+        fixes["DQ-01"] += int(spike.sum())
+        v = np.where(spike, med, v)
+
+    # DQ-03: stuck (same value for 36 readings = 3 hours)
+    status = "healthy"
+    run_start, stuck_run = 0, None
+    for i in range(1, len(v) + 1):
+        if i == len(v) or v[i] != v[run_start]:
+            if i - run_start >= 36 and not np.isnan(v[run_start]):
+                stuck_run = (run_start, i)
+            run_start = i
+    if stuck_run:
+        a, b = stuck_run
+        v[a:b] = np.nan
+        fixes["DQ-03"] += b - a
+        events.append({"code": "DQ-03", "t": int(t[a]), "raw": None,
+                       "action": f"same value for {(b - a) * 5 // 60} h, readings ignored"})
+        status = "stuck"
+
+    # DQ-02: put on a regular 5 minute grid, fill short gaps
+    grid = np.arange(t.min() if len(t) else NOW, NOW, STEP_S) if len(t) else np.arange(NOW - 86400, NOW, STEP_S)
+    grid = np.arange(NOW - (NOW - grid[0]) // STEP_S * STEP_S, NOW, STEP_S)
+    vals = np.full(len(grid), np.nan)
+    pos = ((t - grid[0]) // STEP_S).astype(int)
+    ok = (pos >= 0) & (pos < len(grid))
+    vals[pos[ok]] = v[ok]
+    filled = np.zeros(len(grid), bool)
+    isnan = np.isnan(vals)
+    i = 0
+    while i < len(vals):
+        if isnan[i]:
+            j = i
+            while j < len(vals) and isnan[j]:
+                j += 1
+            gap = j - i
+            if 0 < i and j < len(vals) and gap <= 6 and not (stuck_run and status == "stuck"):
+                vals[i:j] = np.linspace(vals[i - 1], vals[j], gap + 2)[1:-1]
+                filled[i:j] = True
+                fixes["DQ-02"] += gap
+                events.append({"code": "DQ-02", "t": int(grid[i]), "raw": None,
+                               "action": f"{gap * 5} min gap filled"})
+            elif gap > 6 and j == len(vals):
+                status = "offline" if status == "healthy" else status
+            i = j
+        else:
+            i += 1
+
+    # DQ-05: drift against what the meter should read over the last day
+    drift_pct = 0.0
+    if m["type"] == "pressure":
+        recent = slice(-PER_DAY, None)
+        expected = true_series(meter_id, grid[recent])
+        obs = vals[recent]
+        okk = ~np.isnan(obs)
+        if okk.sum() > 50:
+            drift_pct = float(np.median(obs[okk] / expected[okk]) - 1) * 100
+            if abs(drift_pct) >= 6:
+                fixes["DQ-05"] += 1
+                events.append({"code": "DQ-05", "t": int(grid[-1]), "raw": None,
+                               "action": f"reads {drift_pct:+.0f}% against expected"})
+                if status == "healthy":
+                    status = "drifting"
+
+    trust = 100.0
+    trust -= min(20, fixes["DQ-01"] * 0.4)
+    trust -= min(10, fixes["DQ-02"] * 0.1)
+    trust -= min(10, fixes["DQ-04"] * 2)
+    trust -= min(10, fixes["DQ-06"] * 1)
+    if status == "drifting":
+        trust = min(trust, 74)
+    if status == "stuck":
+        trust = 20
+    if status == "offline":
+        trust = 0
+    if status == "healthy" and trust < 95:
+        status = "noisy"
+    return {"t": grid, "v": vals, "filled": filled, "fixes": dict(fixes),
+            "events": sorted(events, key=lambda e: e["t"])[-40:], "status": status, "trust": round(max(trust, 0)), "drift_pct": round(drift_pct, 1)}
+
+
+CACHE = {"version": -1, "flow": {}, "pressure": {}}
+
+
+def refresh():
+    """Rebuild the cleaned series when leaks change. Cheap enough for 72 meters."""
+    with LOCK:
+        if CACHE["version"] == (VERSION["n"], NOW):
+            return CACHE
+        flow, pressure = {}, {}
+        for mid, m in METERS.items():
+            days = HISTORY_DAYS if m["type"] == "flow" else 8
+            t, v = raw_series(mid, days)
+            c = clean(mid, t, v)
+            # meter health (trust, fixes, status) is judged on the last 3 days, whatever length of history is kept
+            recent = t >= NOW - 3 * 86400
+            h = clean(mid, t[recent], v[recent])
+            c.update({k: h[k] for k in ("fixes", "events", "status", "trust", "drift_pct")})
+            c["raw_t"], c["raw_v"] = t, v
+            (flow if m["type"] == "flow" else pressure)[mid] = c
+        CACHE.update(version=(VERSION["n"], NOW), flow=flow, pressure=pressure)
+        return CACHE
+
+
+def meter_trust(mid):
+    c = refresh()
+    d = c["flow"].get(mid) or c["pressure"].get(mid)
+    return d["trust"] if d else 0
+
+
+# ============================================================== night flow and water balance
+def night_flows(zone):
+    """Average cleaned inflow from 02:00 to 04:00 each night, oldest first."""
+    c = refresh()["flow"][api.ZONES[zone]["inlet"]]
+    t, v = c["t"], c["v"]
+    local_h = ((t + 4 * 3600) // 3600) % 24
+    day = (t + 4 * 3600) // 86400
+    out = []
+    for d in np.unique(day):
+        sel = (day == d) & (local_h >= 2) & (local_h < 4)
+        if sel.sum() >= 12 and not np.all(np.isnan(v[sel])):
+            out.append({"night": int(d * 86400 - 4 * 3600 + 3 * 3600), "lps": round(float(np.nanmean(v[sel])), 2)})
+    return out
+
+
+def usual_night(nights, i, rs):
+    """The usual night flow for night i. Same weekday over the last few weeks when the ruleset asks for it and
+    there is enough history; otherwise the median of the oldest 7 nights in the window (wl-1.2 behaviour)."""
+    b = rs.get("baseline") or {}
+    if b.get("mode") == "same_weekday":
+        idx = [i - 7 * w for w in range(1, b.get("weeks", 4) + 1)]
+        if idx[-1] >= 0:
+            return float(np.median([nights[j]["lps"] for j in idx])), True
+    return (float(np.median([n["lps"] for n in nights[:7]])) if len(nights) >= 7 else nights[0]["lps"]), False
+
+
+def zone_flow_stats(zone, rs=None):
+    rs = rs or scoring.get(scoring.ACTIVE)
+    nights = night_flows(zone)
+    last_i = len(nights) - 1
+    base, weekday_ok = usual_night(nights, last_i, rs)
+    last = nights[-1]["lps"]
+    pct = (last - base) / base * 100 if base else 0
+    high_pct = min(t for t, _ in rs["points"]["night_pct"])
+    running = 0
+    for i in range(last_i, -1, -1):
+        b_i = usual_night(nights, i, rs)[0]
+        if b_i and (nights[i]["lps"] - b_i) / b_i * 100 >= high_pct:
+            running += 1
+        else:
+            break
+    c = refresh()["flow"][api.ZONES[zone]["inlet"]]
+    t, v = c["t"][-PER_DAY:], c["v"][-PER_DAY:]
+    m = METERS[api.ZONES[zone]["inlet"]]
+    pat_h = ((t + 4 * 3600) // 3600) % 24
+    expected = ZONE_PROPS[zone]["avg_demand_lps"] * PATTERN[pat_h]
+    okk = ~np.isnan(v)
+    water_in = float(np.nansum(v[okk])) * STEP_S / 1000
+    exp_m3 = float(np.sum(expected[okk])) * STEP_S / 1000
+    gap_pct = (water_in - exp_m3) / exp_m3 * 100 if exp_m3 else 0
+    # flow in the last hour against the same hour on the previous 7 days
+    vv = c["v"]
+    now_mean = float(np.nanmean(vv[-12:]))
+    prev = [np.nanmean(vv[-12 - k * PER_DAY: len(vv) - k * PER_DAY]) for k in range(1, 8) if len(vv) > 12 + k * PER_DAY]
+    usual_now = float(np.nanmedian(prev)) if prev else now_mean
+    now_pct = (now_mean - usual_now) / usual_now * 100 if usual_now else 0
+    return {"nights": nights, "baseline_lps": round(base, 2), "last_night_lps": last,
+            "now_lps": round(now_mean, 2), "usual_now_lps": round(usual_now, 2), "now_pct": round(now_pct, 1),
+            "night_pct": round(pct, 1), "nights_running": running,
+            "water_in_m3": round(water_in), "expected_m3": round(exp_m3),
+            "balance_gap_pct": round(gap_pct, 1), "inlet_trust": meter_trust(m["id"]),
+            "weekday_baseline": weekday_ok}
+
