@@ -78,15 +78,15 @@ const STATUS: Record<LoggerStatus, { text: string; cls: string; color: string }>
                 </select></label></div>
             <div class="table-wrap">
               <table class="data">
-                <thead><tr><th>Logger</th><th>Zone</th><th class="r">Last night</th><th class="r">Usual</th><th class="r">Change</th><th>Status</th></tr></thead>
+                <thead><tr><th>Logger</th><th class="wide">Zone</th><th class="r wide">Last night</th><th class="r wide">Usual</th><th class="r">Change</th><th>Status</th></tr></thead>
                 <tbody>
                   @for (l of rows(); track l.id) {
                     <tr class="clickable" [class.sel]="l.id === selected()" (click)="pick(l.id)">
-                      <td class="mono"><b>{{ l.id }}</b></td>
-                      <td>{{ l.zone_name }} <span class="mono tiny">{{ l.zone }}</span></td>
-                      <td class="r mono">{{ l.last_db }} dB</td><td class="r mono muted">{{ l.usual_db }} dB</td>
+                      <td class="mono nowrap"><b>{{ l.id }}</b></td>
+                      <td class="wide">{{ l.zone_name }} <span class="mono tiny">{{ l.zone }}</span></td>
+                      <td class="r mono wide">{{ l.last_db }} dB</td><td class="r mono muted wide">{{ l.usual_db }} dB</td>
                       <td class="r mono"><b>{{ sign(l.change_db) }}</b></td>
-                      <td><span class="pill" [class]="st(l.status).cls">{{ st(l.status).text }}{{ l.loud_nights > 1 ? ', ' + l.loud_nights + ' nights' : '' }}</span></td>
+                      <td><span class="pill" [class]="st(l.status).cls">{{ st(l.status).text }}<span class="wide">{{ l.loud_nights > 1 ? ', ' + l.loud_nights + ' nights' : '' }}</span></span></td>
                     </tr>
                   } @empty {
                     <tr><td colspan="6" class="muted">No logger was loud last night{{ zone() ? ' in this zone' : '' }}.</td></tr>
@@ -98,11 +98,11 @@ const STATUS: Record<LoggerStatus, { text: string; cls: string; color: string }>
           <div class="card dark side stack">
             <h2>How loggers are used</h2>
             <ul>
-              <li>A logger counts once it is at least 4 dB louder than its usual night, 2 nights in a row</li>
+              <li>A logger counts once it is at least 4 dB louder than its usual night, 2 nights in a row, and steady. Traffic or a pump jumps around, a leak does not</li>
               <li>One loud night is ignored: traffic, roadworks or a night pump do not last</li>
-              <li>Loggers that hear a leak move the search area onto them, so the crew walks a few hundred metres, not a whole zone</li>
+              <li>Loggers that hear a leak where the meters point move the search area onto them, so the crew walks a few hundred metres, not a whole zone</li>
               <li>Pipes right next to a quiet logger are checked last, because a leak there would have been heard</li>
-              <li>Loggers alone can raise a zone to Watch, never higher. Flow or pressure has to agree for more</li>
+              <li>One logger alone cannot raise an alert. Two loggers, or a logger plus flow or pressure, can. Loggers alone never go above Watch</li>
             </ul>
           </div>
         </section>
@@ -125,6 +125,8 @@ const STATUS: Record<LoggerStatus, { text: string; cls: string; color: string }>
     .side ul { margin: 0; padding-left: 18px; color: #D3DEE6; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
     .r { text-align: right; }
     tr.sel td { background: var(--sel); }
+    .nowrap { white-space: nowrap; }
+    @media (max-width: 640px) { .wide { display: none; } td, th { padding-left: 6px; padding-right: 6px; } }
     .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   `],
 })

@@ -24,7 +24,7 @@ import { ChartBand, LineChart } from '../shared/line-chart';
           </div>
         </header>
 
-        <section class="kpis" aria-label="Key numbers">
+        <section class="kpis six" aria-label="Key numbers">
           <div class="card kpi"><div class="label">Water put into network (24 h)</div><div class="value">{{ o.water_in_m3 | num }} m³</div><div class="sub">8 zone inlet meters, after cleaning</div></div>
           <div class="card kpi"><div class="label">Expected use (24 h)</div><div class="value">{{ o.expected_m3 | num }} m³</div><div class="sub">Normal demand pattern per zone</div></div>
           <div class="card kpi dark"><div class="label">Extra water, likely lost</div><div class="value sand">{{ o.extra_m3 | num }} m³</div><div class="sub">{{ o.extra_pct }}% more than expected</div></div>
@@ -32,6 +32,10 @@ import { ChartBand, LineChart } from '../shared/line-chart';
             <div class="sub warn">{{ levelLine() }}</div></div>
           <a class="card kpi link" routerLink="/dashboard/meters"><div class="label">Meters reporting</div><div class="value">{{ o.meters.total - o.meters.offline }}/{{ o.meters.total }}</div>
             <div class="sub">{{ o.meters.noisy }} noisy, {{ o.meters.offline }} offline or stuck</div></a>
+          @if (o.loggers) {
+            <a class="card kpi link" routerLink="/dashboard/loggers"><div class="label">Noise loggers hearing a leak</div><div class="value">{{ o.loggers.noisy }}</div>
+              <div class="sub">{{ o.loggers.total }} loggers, {{ o.loggers.coverage_pct }}% of pipes heard</div></a>
+          }
         </section>
 
         @if (repairs(); as rp) {
@@ -104,6 +108,7 @@ import { ChartBand, LineChart } from '../shared/line-chart';
     } @else if (!error()) { <div class="skeleton">Loading the network...</div> }
   `,
   styles: [`
+    .kpis.six { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
     .page { gap: 22px; max-width: 1280px; }
     h1 { font-size: 32px; margin-top: 4px; }
     .top { align-items: stretch; gap: 16px; }

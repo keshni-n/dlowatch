@@ -1822,7 +1822,11 @@ def alert_replay(aid: str):
         srch = a.get("search") or {}
         top = (srch.get("areas") or [None])[0]
         st = ", ".join(a.get("streets", [])[:2]) or "the zone"
-        if top and srch.get("source") == "model":
+        if top and top.get("from_loggers"):
+            ev.append({"t": a["created"] + 60, "tag": "Loggers", "title": "Noise loggers point to the spot",
+                       "detail": f"{', '.join(top['from_loggers'][:3])} loud and steady for 2 nights or more. "
+                                 f"Search area {top['radius_m']:.0f} m around them, near {st}."})
+        elif top and srch.get("source") == "model":
             ev.append({"t": a["created"] + 60, "tag": "AI model", "title": "Model suggests where to look",
                        "detail": f"Area {top['area']} ({top['probability']:.0%}), around {st}. About {srch.get('flow_lps')} L/s lost."})
         elif top:
