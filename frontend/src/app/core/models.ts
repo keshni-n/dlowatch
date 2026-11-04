@@ -92,7 +92,9 @@ export interface MeterDetail {
 export interface PublicReportRow {
   code: string; created: number; lat: number; lon: number; kind: string; kind_kreol: string; kind_en: string;
   zone: string | null; zone_name: string; note: string | null; has_photo: boolean; alert: string | null;
-  status: 'new' | 'linked' | 'cluster' | 'fixed';
+  status: 'new' | 'linked' | 'cluster' | 'fixed' | 'outside' | 'forwarded';
+  forwarded?: number | null; forwarded_by?: string | null;
+  photo_hint?: string | null; photo_ok?: boolean | null;
 }
 export interface Cluster { alert: string; kind: string; zone: string; zone_name: string; count: number; devices: number; street: string | null; minutes: number; score: number; }
 
@@ -103,6 +105,11 @@ export interface Job {
   outcome: string | null; outcome_text: string | null; cause: string | null; notes: string | null;
   score: number; level: Level; why: string; reasons: string[]; streets: string[];
   latlon: [number, number] | null; search_radius_m: number | null; pipes: string[]; suspects: Suspect[];
+  reports: JobReport[];
+}
+export interface JobReport {
+  code: string; created: number; kind_en: string; kind_kreol: string; note: string | null;
+  latlon: [number, number]; has_photo: boolean; photo_hint?: string | null;
 }
 export interface Label { alert: string; zone: string; label: string; cause?: string; by: string; at: number; true_pipe?: string; }
 

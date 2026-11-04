@@ -36,7 +36,7 @@ const KIND: Record<string, Record<string, string>> = {
             </div>
             @if (r.status) {
               <div class="small">{{ kind(r.status.kind) }} · {{ r.status.area }}</div>
-              <div class="steps" aria-hidden="true">
+              <div class="steps" aria-hidden="true" [style.grid-template-columns]="'repeat(' + r.status.steps.length + ', 1fr)'">
                 @for (s of r.status.steps; track s.key) { <span [class.done]="s.done"></span> }
               </div>
             }
