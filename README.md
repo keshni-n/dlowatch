@@ -58,7 +58,8 @@ npm start
 Open http://localhost:4200. `npm start` forwards `/api` to the backend on port 8000.
 
 **On a phone (same Wi-Fi):** run `npm run phone` and open `https://<laptop IP>:4200` (tap Advanced, then Proceed, at the certificate warning).
-It uses https so the phone shares its location, and turns off live reload: otherwise the page reloads when you come back from the camera and the report is lost.
+It uses https so the phone shares its location, and turns off live reload: otherwise the page reloads when you come back from the camera.
+The Report page also keeps what was filled in (place, type, note, photo) if the page reloads.
 
 ## Public side (no login)
 
@@ -243,6 +244,14 @@ The town is only about 2.7 km by 1.4 km, so this is still rough: say so in the p
 
 Limits, say these in the pitch: everything is simulated on an illustrative network; the model was trained on the same network; the meter faults tested are the kinds the cleaning step was built for; one leak at a time. Expect more false alarms and a bigger distance on real CWA data. The BattLeDIM test above shows what happens with realistic demand.
 
+## Public reports: what the operator can do
+
+- **Create alert** (report on its own, inside the network): opens an alert from that one report, so a crew can be sent.
+  Reports on their own within 150 m in the last 24 h join it. Public reports alone still score Watch at most.
+- **Forward** (report outside the network): marks it as passed on to the team for that area. The person who reported
+  sees "Sent to the team for your area". Reports outside the network are never grouped into an alert.
+- Crews see the public reports linked to their job, with the photos, on the job page.
+
 ## Photo check on the phone
 
 When someone takes a photo on the Report page, the phone checks it before sending (`frontend/src/app/shared/photo-check.ts`):
@@ -250,7 +259,7 @@ When someone takes a photo on the Report page, the phone checks it before sendin
 - **Too dark**, **nearly blank** (camera covered) or **blurry**: the person sees why, with **Retake** or **Keep it anyway**. Nothing is ever blocked.
 - The result goes with the report as a hint. Staff see it under the photo on Public reports ("Photo check: blurry (sent anyway)"), and crews see it on the job. It never changes the score, and the server does not trust it.
 - Limits are lenient on purpose, so a dark photo of a real burst at night still passes.
-- **A trained model can be added later:** put it in `PHOTO_MODEL` in `photo-check.ts` (for example a small MobileNet trained on "water or leak", "pipe", "not relevant" photos). It then also warns when a photo for "Water on the road" or "Broken pipe" does not look relevant. Until then only the simple checks run.
+- **A trained model can be added later:** put it in `PHOTO_MODEL` in `photo-check.ts` (for example a small MobileNet trained on "water or leak", "pipe", "not relevant" photos). It then also warns when a photo for "Water on the road" or "Broken pipe" does not look relevant.
 
 ## Public report safety
 

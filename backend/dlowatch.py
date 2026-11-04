@@ -1245,7 +1245,8 @@ def add_report(body: ReportIn, at=None):
         zone = point_in_zone(body.lat, body.lon)
         r = {"code": code, "created": at or int(time.time()), "lat": round(body.lat, 4), "lon": round(body.lon, 4),
              "kind": body.kind, "note": body.note, "device": hashlib.sha256(body.device.encode()).hexdigest()[:12],
-             "photo": body.photo, "zone": zone, "alert": None, "cluster": None}
+             "photo": body.photo, "zone": zone, "alert": None, "cluster": None,
+             "photo_check": body.photo_check.model_dump() if body.photo and body.photo_check else None}
         REPORTS[code] = r
         link_report(r)
         return r
@@ -1827,7 +1828,7 @@ def report_photo(code: str):
 def report_to_alert(code: str, user=Depends(OPS_ONLY)):
     """Operator opens an alert from a single report (a clear photo of a broken pipe, say), so a crew can be sent.
     Other reports on their own within 150 m in the last 24 h join it. Public reports alone still score Watch at most."""
-    with LOCK, store.transaction():
+    with LOCK:
         r = REPORTS.get(code)
         if not r:
             raise HTTPException(404, "No report with this code")
@@ -1847,10 +1848,8 @@ def report_to_alert(code: str, user=Depends(OPS_ONLY)):
                        "search": {"source": "reports", "best_guess": [lat, lon], "areas": [], "flow_lps": None, "m3_day": None},
                        "dp_mm": {}, "latlon": [lat, lon], "streets": streets_of(pipes_near(r["zone"], lat, lon, 150)),
                        "reports": [x["code"] for x in group], "job": None, "events": [], "opened_by": user["name"]}
-        store.save_alert(ALERTS[aid])
         for x in group:
             x["alert"] = aid
-            store.save_report(x)
         log.warning("Alert %s opened from report %s by %s", aid, code, user["name"])
         return {"alert": aid}
 
@@ -1866,7 +1865,6 @@ def forward_report(code: str, user=Depends(OPS_ONLY)):
             raise HTTPException(400, "This report is inside our network. Open an alert from it instead.")
         if not r.get("forwarded"):
             r["forwarded"], r["forwarded_by"] = int(time.time()), user["name"]
-            store.save_report(r)
         return report_view(r)
 
 
