@@ -18,6 +18,7 @@ The app is a PWA: on a phone, open it in Chrome and tap **Add to Home Screen** t
 backend/
   api.py, build_*.py, generate_leak_dataset.py, train_models.py   network, dataset and models (EPANET + WNTR)
   dlowatch.py      logins, rules engine, meter cleaning, reports, crews, jobs
+  acoustic.py      noise loggers: where they are and their simulated night readings
   server.py        starts api.py + dlowatch.py together
   output_north/    network files (GeoJSON, .inp per zone, sensors, metrics)
 frontend/          Angular 22 app (all screens), installable as a PWA
@@ -119,6 +120,7 @@ Tested over 6 virtual days with leaks starting at random: bursts alerted in a me
 2. Open **Zones and meters** and show the raw vs cleaned chart (noisy data question answered).
 3. In a second window signed in as **admin**, open **System test**, click a pipe, choose Large, start the test leak. The detector finds it from the meters and the alert appears on the operator's screen.
 4. Walk through "How this score was worked out", then **Send crew** to Crew 1.
+   For the noise loggers: start a second test leak, Medium, **Started: 2 nights ago**. Show the alert's map zoomed on the loggers that hear it, then the **Noise loggers** page with that logger's 14-night chart.
 5. On a phone (or a small browser window): `/crew`, sign in as CW-0108, open the job, Leak found, Close the job.
 6. Back on the dashboard: alert closed, result saved under **Field crews**. Restart the server: everything is still there.
 7. Public: `/` on a phone, report a leak with a photo, get a code, track it.
@@ -141,7 +143,7 @@ The rules decide, the model only helps. Same idea as FraudLens ("the AI reads, t
   water at the inlet meter. Only the strongest scores, the others show as "supports".
 - **Switch:** admin only, System test page, "AI assist" On/Off. Or start with `DLOWATCH_MODEL=off`.
 
-| Code | Signal | Points (wl-1.3) |
+| Code | Signal | Points (wl-1.5) |
 |---|---|---|
 | NF-01 | Night flow (02:00 to 04:00) above the usual level | 14 / 22 / 30 |
 | NF-02 | Still high several nights in a row | 8 |
@@ -151,10 +153,13 @@ The rules decide, the model only helps. Same idea as FraudLens ("the AI reads, t
 | PR-02 | Sudden pressure drop with a flow jump (burst) | 20 |
 | AI-01, AI-02 | Model says leak / points to one area (only when the meters agree) | max 20 together |
 | PUB-01 | 3+ different phones reported nearby | 10 (22 if no meter alert) |
+| AC-01 | Leak noise: a logger loud and steady 2+ nights in a row | 10 / 16 |
+| AC-02 | 2+ loggers close together hear it | 6 |
 | IX-1 | Flow and pressure signals agree | 8 |
+| IX-2 | Flow rise and leak noise agree | 6 |
 
 Bands: 20+ Watch, 45+ High, 70+ Critical. A burst (PR-02 with a flow signal) is always at least Critical.
-Public reports alone are capped at Watch. Meters under 80% trust count for half, under 50% not at all.
+Public reports alone, and noise loggers alone, are capped at Watch. Meters under 80% trust count for half, under 50% not at all.
 
 ## Repair-priority list and pipe suspects
 
@@ -198,28 +203,57 @@ Same points as wl-1.2, plus two checks chosen on BattLeDIM L-Town 2018 data:
 
 Both need 4 weeks of history. The demo keeps 13 days, so the app falls back to wl-1.2 behaviour and says so in the alert's rule notes.
 
+## Noise loggers (acoustic, rulesets wl-1.4 and wl-1.5)
+
+A third kind of sensor, next to the flow and pressure meters. Noise loggers sit in valve and hydrant chambers, listen to the pipe from 2 to 4 am and send one noise level per night. Escaping water makes a steady hiss that travels along the pipe, so a logger near a leak gets louder and stays loud.
+
+- **Where:** 448 loggers, one per 4 km of pipe, spread evenly over each zone (`backend/acoustic.py`, settings in `config/acoustic.json`). About 49% of the pipe length is within 300 m of one (Port Louis 76%, Poudre d'Or 27%). Leaks elsewhere are found by flow and pressure as before.
+- **Readings (simulated):** a quiet night is 15 to 23 dB, a bit more next to main roads. About 1 night in 50 a logger is loud for one night (a pump, roadworks). A leak is louder the more water escapes and fades along the pipe: clear within about 150 m, gone after about 300 m.
+- **Leak noise:** a logger counts after 2 loud nights in a row (4 dB above its usual level) that are steady (within 3 dB of each other). Traffic and pumps jump around, a leak does not. One loud night shows under "Not counted".
+- **Score:** AC-01, AC-02 and IX-2 above. One logger alone cannot raise an alert; two loggers, or a logger plus a flow or pressure signal, can.
+- **Search area:** noisy loggers inside or near the meters' or model's search area put a 300 m area around them first and move the best guess there. Pipes right next to a quiet logger are ranked lower, because a leak there would have been heard. Neither is used for a burst the loggers have not recorded yet.
+- **Screens:** **Noise loggers** page (map, 14-night chart per logger, list of loud ones), loggers on the alert map with a "Noise loggers nearby" list.
+- **Demo:** System test, pick a medium leak and **Started: 2 nights ago**. The loggers next to it are loud and the search area moves onto them.
+- wl-1.4 was the first version. The evaluation showed one logger alone could raise false alarms and a noisy logger elsewhere could pull a burst's search area away, so wl-1.5 lowers the points and adds the "steady", "agrees with the meters" and "not for fresh bursts" checks. wl-1.4 is kept unchanged, as for every published ruleset.
+
+**Before and after** (same leaks, same random draws, scored with wl-1.3 and with wl-1.5):
+
+| Leaks | Median distance off | Leak in the first block | Leak in the top 3 blocks |
+|---|---|---|---|
+| Slow leaks running 2+ nights (37) | 428 → **172 m** | 17% → **34%** | 43% → **63%** |
+| · of those, within hearing range of a logger (23) | 384 → **167 m** | 14% → **43%** | 43% → **76%** |
+| All leaks (128) | 384 → 308 m | 22% → 27% | 45% → 50% |
+| Bursts under 6 hours (64) | 316 → 316 m | 27% → 27% | 50% → 50% |
+| Rules only, model off (64) | 994 → 713 m | 6% → 14% | 22% → 31% |
+
+With the model off, the loggers also raise alerts for more leaks (80% → 86%). They add one false alarm in 128 days with no leak (a stuck pressure sensor plus a noisy logger). Bursts are unchanged, as they should be: the loggers have not recorded them yet.
+
+Limits: the logger noise is a simple simulation (louder with more water, fading with distance). Real loggers depend on pipe material, depth and street noise, and the 300 m hearing range is an assumption to check with a supplier.
+
 ## How well does it work? (evaluation)
 
 ```
 cd backend
-python evaluate.py          # about 2 minutes, writes evaluation/results.json and results.md
+python evaluate.py          # about 7 minutes, writes evaluation/results.json and results.md
 ```
 
 It runs 352 simulated scenarios on the network (seed 7, water use +-5%, pressure sensors +-1 mm, the same as the training data). Each scenario lands on a random day of the past month, because water use differs from day to day.
 
 | Test | Result |
 |---|---|
-| Slow leaks found | 62/64 (97%) |
+| Slow leaks found | 61/64 (95%) |
 | Bursts found | 64/64 (100%), all rated Critical |
-| False alarms on normal days | 1/64 (2%) |
+| False alarms on normal days | 2/64 (3%) |
 | False alarms with a faulty meter (spikes, stuck, drift, gaps, reset, offline) | 4/64 (6%) |
-| Typical distance off, with the model | 396 m (80% within 670 m) |
-| Leak pipe inside the search area, with the model | 90% |
-| Leak in the top 3 / top 5 blocks to check | 44% / 56% |
-| Leak size off by (median) | 1.7% |
-| Model switched off (rules only) | 52/64 alerted, 944 m off, 60% inside the search area |
+| Typical distance off, with the model | 308 m (80% within 609 m) |
+| Leak pipe inside the search area, with the model | 93% |
+| Leak in the top 3 / top 5 blocks to check | 50% / 66% |
+| Leak size off by (median) | 1.6% |
+| Model switched off (rules only) | 55/64 alerted, 713 m off, 62% inside the search area |
 | One phone sending 16 reports | grouped as 1, no alert |
 | Three phones reporting the same spot | grouped, stays below Watch until sensors agree |
+
+Ruleset wl-1.5, with the noise loggers. Each leak is also scored without them; see "Noise loggers" above for the before and after.
 
 ### Public benchmark: BattLeDIM L-Town (rules only)
 
@@ -285,7 +319,8 @@ Nothing here is real CWA data. This is how each part was made, so you can explai
 | Zones | Split into 8 zones (DMAs), each with its own reservoir and an inlet flow meter, like a real district setup |
 | Water use | Assumed demand spread by street length, with a 24-hour pattern (low at night, peaks at 7 to 8am and 6pm) |
 | Elevations | Assumed unless a DEM file is given |
-| Sensors | Pressure sensors spread evenly in each zone, plus the inlet meter |
+| Sensors | Pressure sensors spread evenly in each zone, plus the inlet meter. Noise loggers spread evenly, one per 4 km of pipe |
+| Noise readings | One level per logger per night: background noise, small night-to-night changes, the odd loud night, plus the hiss of any leak nearby (louder with more water, fading over about 300 m) |
 | Training data for the AI | 24,000 EPANET runs: a leak of random size at a random junction (or no leak), at 3am and 8am, with +-5% water use and 1 mm sensor noise. The model learns which zone, which area, the best-guess point and the size |
 | Meter readings in the app | The zone's demand pattern plus small day-to-day changes, plus the effect of any leak in the network. Then noise (about 5 mm for pressure loggers), the odd lost reading, and lasting faults on a few meters. Fixed per day, so past readings never change |
 | Leaks | Start at random in the simulated network (`config/network.json`), each one a real EPANET emitter simulation. The detector only sees the meters |
@@ -306,7 +341,7 @@ The BattLeDIM L-Town test is different: that network, its demand and its leak li
 - The public side shows leak notices (a zone, a street, or the middle of a group of reports), never a single report's location or who sent it. A report's status can only be seen with its code.
 - Staff and crew accounts are separate, and the manager account can only view.
 
-**Honesty.** The app says on screen that the network and readings are simulated. The evaluation lists its limits, and the BattLeDIM test shows where the system is weak (finding the exact place).
+**Honesty.** The screens look like a deployed system, so the pitch must say that the network and readings are simulated (see "Be honest in the pitch"). The evaluation lists its limits, and the BattLeDIM test shows where the system is weak (finding the exact place).
 
 **Risks we know about.**
 - A false alarm can send a crew for nothing. That is why public reports alone stay at Watch, and why an alert needs night flow to stay high 2 nights.
@@ -352,4 +387,4 @@ Security notes:
 ## Be honest in the pitch
 
 The network is built from real OpenStreetMap streets, but pipe sizes, demand, reservoirs and elevations are assumed,
-and the meter readings are simulated. It is not real CWA data. The screens are kept clean like a deployed system, so say this yourself in the pitch. Accounts and test results are only in this README, not on screen.
+and the meter and noise logger readings are simulated. It is not real CWA data. The screens are kept clean like a deployed system, so say this yourself in the pitch. Accounts and test results are only in this README, not on screen.

@@ -1,0 +1,182 @@
+{
+  "version": "wl-1.5",
+  "description": "Same as wl-1.3, plus acoustic noise loggers (replaces wl-1.4, which let one logger raise an alert alone and gave too many false alarms in the evaluation). AC-01: a logger has been loud for at least 2 nights in a row and steady (the loud nights within 3 dB of each other; traffic or a pump jumps around, a leak does not). One logger alone is not enough for an alert. AC-02: more loggers close together agree. Flow rise plus leak noise is a combo (IX-2). Noise alone stays at Watch at most. Noisy loggers move the search area onto them when they agree with where the meters or the model point, and pipes right next to a quiet logger are ranked lower, because a leak there would have been heard. Neither is used for a burst the loggers have not recorded yet.",
+  "published": "2026-11-04",
+  "bands": {
+    "watch": 20,
+    "high": 45,
+    "critical": 70
+  },
+  "trust": {
+    "full": 80,
+    "min": 50
+  },
+  "points": {
+    "night_pct": [
+      [
+        30,
+        30
+      ],
+      [
+        15,
+        22
+      ],
+      [
+        6,
+        14
+      ]
+    ],
+    "now_pct": [
+      [
+        5,
+        20
+      ],
+      [
+        2,
+        14
+      ]
+    ],
+    "balance_pct": [
+      [
+        6,
+        18
+      ],
+      [
+        2,
+        12
+      ]
+    ],
+    "pressure_mm": [
+      [
+        60,
+        18
+      ],
+      [
+        10,
+        12
+      ]
+    ],
+    "nights_running": {
+      "min_nights": 2,
+      "points": 8
+    },
+    "burst": 20,
+    "ai_probability": [
+      [
+        0.9,
+        15
+      ],
+      [
+        0.7,
+        10
+      ]
+    ],
+    "ai_area": {
+      "min_probability": 0.4,
+      "points": 8
+    },
+    "public": {
+      "min_phones": 3,
+      "points": 10,
+      "points_without_meters": 22,
+      "one_report": 4
+    },
+    "acoustic": {
+      "noise_db": [
+        [
+          10,
+          16
+        ],
+        [
+          4,
+          10
+        ]
+      ],
+      "more_loggers": {
+        "min_loggers": 2,
+        "points": 6
+      },
+      "min_nights": 2,
+      "steady_db": 3
+    }
+  },
+  "caps": {
+    "ai_total": 20,
+    "public_only_max": 44,
+    "max": 100,
+    "acoustic_only_max": 44
+  },
+  "dedupe": true,
+  "facts": {
+    "NF-01": "extra water at the inlet meter",
+    "NF-03": "extra water at the inlet meter",
+    "WB-01": "extra water at the inlet meter"
+  },
+  "ground_ai": true,
+  "grounding": {
+    "area_drop_mm": 10,
+    "area_margin_m": 300
+  },
+  "fallback_search": {
+    "radius_m": 1200
+  },
+  "interactions": [
+    {
+      "id": "IX-1",
+      "points": 8,
+      "finding": "Flow rise and pressure drop together",
+      "any_a": [
+        "NF-01",
+        "NF-03",
+        "WB-01"
+      ],
+      "any_b": [
+        "PR-01"
+      ]
+    },
+    {
+      "id": "IX-2",
+      "points": 6,
+      "finding": "Flow rise and leak noise together",
+      "any_a": [
+        "NF-01",
+        "NF-03",
+        "WB-01"
+      ],
+      "any_b": [
+        "AC-01"
+      ]
+    }
+  ],
+  "floors": [
+    {
+      "id": "FL-BURST",
+      "min": 70,
+      "all": [
+        "PR-02"
+      ],
+      "any": [
+        "NF-01",
+        "NF-03"
+      ],
+      "note": "Burst rule: sudden pressure drop plus a flow jump is at least Critical."
+    }
+  ],
+  "persistence": {
+    "min_nights": 2
+  },
+  "baseline": {
+    "mode": "same_weekday",
+    "weeks": 4
+  },
+  "pressure_check": {
+    "spread_k": 3,
+    "history_nights": 28
+  },
+  "acoustic_search": {
+    "quiet_radius_m": 150,
+    "quiet_weight": 0.3,
+    "group_radius_m": 600,
+    "match_margin_m": 300
+  }
+}

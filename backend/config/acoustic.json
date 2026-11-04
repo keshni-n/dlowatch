@@ -1,0 +1,6 @@
+{
+  "_note": "Acoustic noise loggers. One logger for every few km of pipe in a zone, fitted in valve or hydrant chambers. They listen between 2 and 4 am and send one noise level per night.",
+  "km_of_pipe_per_logger": 4.0,
+  "hearing_range_m": 300,
+  "_range_note": "How far a logger hears a leak. About 300 m is typical on metal mains, less on plastic pipes. Assumption: replace with the supplier's figure."
+}

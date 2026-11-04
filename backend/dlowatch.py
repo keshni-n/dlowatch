@@ -36,6 +36,7 @@ import wntr
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
+import acoustic
 import api  # the existing backend: network, models, EPANET leak simulation
 import scoring
 import store
@@ -264,7 +265,42 @@ def zone_label(z):
     return f"{ZONE_NAMES.get(z, z)} ({z})"
 
 
+_ZONE_PTS = {}
+
+
+def nearest_zone(lat, lon):
+    """The zone whose pipe junctions are closest to this spot, and how far the closest one is (m)."""
+    if not _ZONE_PTS:
+        for f in api.GEO["nodes"]["features"]:
+            p = f["properties"]
+            if p["id"].startswith("J_") and p.get("zone") in api.ZONES:
+                _ZONE_PTS.setdefault(p["zone"], []).append(f["geometry"]["coordinates"])
+        for z in list(_ZONE_PTS):
+            _ZONE_PTS[z] = np.array(_ZONE_PTS[z])
+    kx = 111320 * math.cos(math.radians(lat))
+    best = (None, float("inf"))
+    for z, pts in _ZONE_PTS.items():
+        d = float(np.sqrt((((pts[:, 0] - lon) * kx) ** 2 + ((pts[:, 1] - lat) * 110540) ** 2).min()))
+        if d < best[1]:
+            best = (z, d)
+    return best
+
+
 def point_in_zone(lat, lon):
+    """
+    The zone a spot belongs to. Inside a zone outline, that zone. Just outside every outline (the outlines
+    hug the pipes, so homes at a zone's edge or in the gap between two zones fall out), the zone with a pipe
+    junction within zone_snap_m. Farther than that: None, outside the service area.
+    """
+    z = _inside_outline(lat, lon)
+    if z:
+        return z
+    near, dist = nearest_zone(lat, lon)
+    snap = (globals().get("PUBLIC") or {}).get("zone_snap_m", 400)
+    return near if dist <= snap else None
+
+
+def _inside_outline(lat, lon):
     for f in api.GEO["zones"]["features"]:
         ring = f["geometry"]["coordinates"][0]
         inside, j = False, len(ring) - 1
@@ -339,6 +375,12 @@ def meters():
 
 
 METERS = {m["id"]: m for m in meters()}
+
+# Acoustic noise loggers: a third kind of sensor, next to the flow and pressure meters (see acoustic.py)
+ACOUSTIC = acoustic.load_settings(SETTINGS_DIR)
+LOGGERS = acoustic.place_loggers(api.GEO, api.ZONES, ACOUSTIC)
+LOGGER_COVERAGE = acoustic.pipe_coverage(api.GEO, LOGGERS, ACOUSTIC)
+log.info("%d acoustic loggers, %d%% of pipe length within hearing range", len(LOGGERS), LOGGER_COVERAGE["overall"])
 
 
 def pick_fault_meters():
@@ -615,6 +657,113 @@ def refresh():
         return CACHE
 
 
+LOUD_DB = 4.0     # a night counts as loud when it is this many dB above the logger's usual level
+STEADY_DB = 3.0   # loud nights in a run must be this close to each other (leak noise is steady)
+LOGGER_CACHE = {"version": None, "levels": {}, "causes": {}}
+
+
+def logger_nights(days=HISTORY_DAYS):
+    """3 am of each of the last few nights whose 2 to 4 am recording is finished, oldest first."""
+    last = next_3am(NOW) - 86400
+    if last + 3600 > NOW:
+        last -= 86400
+    return [last - 86400 * i for i in range(days - 1, -1, -1)]
+
+
+def logger_levels():
+    """Noise level per logger per night. Rebuilt when leaks change or a new night is recorded."""
+    with LOCK:
+        nights = logger_nights()
+        key = (VERSION["n"], nights[-1])
+        if LOGGER_CACHE["version"] != key:
+            levels, causes = acoustic.night_levels(LOGGERS, list(LEAKS.values()), nights, ACOUSTIC, seed_of)
+            LOGGER_CACHE.update(version=key, levels=levels, causes=causes)
+        return LOGGER_CACHE["levels"]
+
+
+def logger_state(lid):
+    """Last night against the usual level (median of the nights before the last 3)."""
+    rows = logger_levels()[lid]
+    usual = float(np.median([r["db"] for r in rows[:-3]]))
+    last = rows[-1]["db"]
+    loud = [r["db"] - usual >= LOUD_DB for r in rows[-3:]]
+    streak = 0
+    for i in range(len(loud) - 1, -1, -1):
+        if not loud[i]:
+            break
+        # leak noise is steady: a loud night only extends the run if it is close to the next one
+        if streak and abs(rows[-3 + i]["db"] - rows[-3 + i + 1]["db"]) > STEADY_DB:
+            break
+        streak += 1
+    return {"last_db": last, "usual_db": round(usual, 1), "change_db": round(last - usual, 1),
+            "loud_nights": streak, "status": "noisy" if streak >= 2 else "loud once" if streak == 1 else "quiet"}
+
+
+def zone_loggers(zone):
+    """Every logger in a zone with its state, loudest change first."""
+    out = [{**lg, **logger_state(lid)} for lid, lg in LOGGERS.items() if lg["zone"] == zone]
+    return sorted(out, key=lambda x: -x["change_db"])
+
+
+def heard_by_loggers(a):
+    """Had the loggers recorded this leak yet? They need it running through the last 2 nights."""
+    return a["kind"] != "burst" and a.get("started", NOW) <= logger_nights()[-2] - 3600
+
+
+def noise_area(zone, rs, base=None):
+    """
+    Where the noisy loggers point: the loudest noisy logger, plus noisy loggers within group_radius_m of it,
+    centred on them weighted by how much louder they are. None when no logger in the zone is noisy.
+    With base (the meters' or model's search), only loggers inside or near those areas are used, so a noisy
+    logger elsewhere in the zone (another leak, or street noise) does not pull the search away.
+    """
+    if not (rs.get("points") or {}).get("acoustic"):
+        return None
+    cfg = rs.get("acoustic_search") or {}
+    noisy = [x for x in zone_loggers(zone) if x["status"] == "noisy"]
+    if base and base.get("areas"):
+        margin = cfg.get("match_margin_m", 300)
+        noisy = [x for x in noisy if any(km(ar["centre_latlon"][0], ar["centre_latlon"][1], x["lat"], x["lon"]) * 1000
+                                         <= ar["radius_m"] + margin for ar in base["areas"] if ar.get("area") != "N1")]
+    if not noisy:
+        return None
+    top = noisy[0]
+    group = [x for x in noisy if km(top["lat"], top["lon"], x["lat"], x["lon"]) * 1000 <= cfg.get("group_radius_m", 600)]
+    w = [max(0.1, x["change_db"]) for x in group]
+    lat = sum(x["lat"] * wi for x, wi in zip(group, w)) / sum(w)
+    lon = sum(x["lon"] * wi for x, wi in zip(group, w)) / sum(w)
+    radius = ACOUSTIC["hearing_range_m"]
+    return {"area": "N1", "probability": None, "centre_latlon": [round(lat, 6), round(lon, 6)], "radius_m": radius,
+            "pipes": pipes_near(zone, lat, lon, radius), "from_loggers": [x["id"] for x in group]}
+
+
+def apply_loggers(a):
+    """
+    Put the noisy loggers' area first in the alert's search and move the best guess onto it.
+    The search from the meters or the model is kept in search_meters, so this can be redone every scan.
+    """
+    if a["kind"] == "public" or a["status"] != "open":
+        return
+    rs = scoring.get(a.get("ruleset", RULESET))
+    base = a.get("search_meters") or a.get("search") or {}
+    # 2 steady loud nights already show the loggers heard it, so only fresh bursts are left out here;
+    # the start time is an estimate and is only used for the quiet-logger ranking
+    na = noise_area(a["zone"], rs, base) if a["kind"] != "burst" else None
+    if not na:
+        if a.get("search_meters"):
+            a["search"] = a.pop("search_meters")
+        return
+    a["search_meters"] = base
+    a["search"] = {**base, "best_guess": na["centre_latlon"], "areas": [na] + [x for x in base.get("areas", []) if x.get("area") != "N1"],
+                   "loggers": na["from_loggers"]}
+
+
+def quiet_logger_points(zone, rs):
+    """Quiet loggers in a zone, in metres, for ranking pipes next to them lower."""
+    pts = [_xy(x["lat"], x["lon"]) for x in zone_loggers(zone) if x["status"] == "quiet"]
+    return np.array(pts) if pts else None
+
+
 def meter_trust(mid):
     c = refresh()
     d = c["flow"].get(mid) or c["pressure"].get(mid)
@@ -875,6 +1024,9 @@ def suspects(a, keep_all=False):
     spread = max(50.0, float(cfg["location_spread_m"]))
     size = max(50.0, float(cfg.get("stretch_size_m", 300)))
     weight = {}
+    rs = scoring.get(a.get("ruleset", RULESET))
+    qcfg = rs.get("acoustic_search") if (rs.get("points") or {}).get("acoustic") else None
+    quiet = quiet_logger_points(a["zone"], rs) if qcfg and heard_by_loggers(a) else None
     for ar in areas:
         p_area = ar["probability"] if ar.get("probability") is not None else 1.0
         for pid in ar["pipes"]:
@@ -883,6 +1035,11 @@ def suspects(a, keep_all=False):
                 continue
             d = km(g[0], g[1], m["lat"], m["lon"]) * 1000
             w = p_area * math.exp(-0.5 * (d / spread) ** 2)
+            if quiet is not None:
+                # a leak right next to a quiet logger would have been heard
+                mx, my = _xy(m["lat"], m["lon"])
+                if (((quiet - (mx, my)) ** 2).sum(axis=1)).min() <= qcfg.get("quiet_radius_m", 150) ** 2:
+                    w *= qcfg.get("quiet_weight", 0.3)
             if w > weight.get(pid, 0):
                 weight[pid] = w
     total = sum(weight.values())
@@ -1067,6 +1224,27 @@ def collect_signals(a, rs):
                     f"Area {top['area']}: {top['probability']:.0%} likely, {top['radius_m']:.0f} m radius" + (f". {why}" if ok and rs.get("ground_ai") else ""),
                     "AI model", ar["points"])
 
+    ac = P.get("acoustic")
+    if ac and a["kind"] != "public":
+        ls = zone_loggers(zone)
+        noisy = [x for x in ls if x["status"] == "noisy"]
+        once = [x for x in ls if x["status"] == "loud once"]
+        if noisy:
+            top = noisy[0]
+            add("AC-01", "Leak noise at a logger",
+                f"{top['id']}: {top['change_db']:.0f} dB louder than usual for {top['loud_nights']} nights in a row "
+                f"({top['last_db']} vs usual {top['usual_db']} dB)", "Rules", scoring.tier(top["change_db"], ac["noise_db"]))
+            mo = ac.get("more_loggers") or {}
+            na = noise_area(zone, rs)
+            n_group = len(na["from_loggers"]) if na else 1
+            if mo and n_group >= mo.get("min_loggers", 2):
+                add("AC-02", f"{n_group} loggers close together hear it",
+                    ", ".join(na["from_loggers"][:4]), "Rules", mo.get("points", 0))
+        elif once:
+            x = once[0]
+            rejected.append({"code": "AC-01", "finding": f"Logger {x['id']} was {x['change_db']:.0f} dB louder last night",
+                             "reason": f"Loud for 1 night only, which is often traffic or a night pump. It counts after {ac.get('min_nights', 2)} nights in a row"})
+
     pub = P["public"]
     linked = [REPORTS[c] for c in a.get("reports", []) if c in REPORTS]
     phones = len({r["device"] for r in linked})
@@ -1104,7 +1282,8 @@ def score_alert(a):
         out["notes"].append(f"Inlet meter trust is {fs['inlet_trust']}%, so its signals count for half.")
     if a.get("model_status") in ("off", "unavailable") and a["kind"] != "public":
         out["notes"].append("AI assist was " + ("switched off" if a["model_status"] == "off" else "not available")
-                            + " for this alert. Scored by the rules only, search area from the pressure sensors.")
+                            + " for this alert. Scored by the rules only, search area from the "
+                            + ("noise loggers." if (a.get("search") or {}).get("loggers") else "pressure sensors."))
     return {**out, "rejected": rejected, "ruleset": rs["version"], "flow": fs}
 
 
@@ -1301,7 +1480,8 @@ def link_report(r):
             x["alert"] = aid
 
 
-PUBLIC_DEFAULT = {"max_reports_per_phone_per_hour": 5, "max_reports_per_phone_per_day": 15, "same_photo_block_hours": 24}
+PUBLIC_DEFAULT = {"max_reports_per_phone_per_hour": 5, "max_reports_per_phone_per_day": 15, "same_photo_block_hours": 24,
+                  "zone_snap_m": 400}
 PUBLIC = load_settings("public.json", PUBLIC_DEFAULT)
 EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+(\.[\w-]+)+")
 PHONE_RE = re.compile(r"(\+?\d[\d\s-]{6,}\d)")
@@ -1521,6 +1701,8 @@ def overview():
         "alerts": alerts, "levels": dict(levels),
         "meters": {"total": len(ms), "healthy": st["healthy"], "noisy": st["noisy"] + st["drifting"],
                    "offline": st["offline"] + st["stuck"]},
+        "loggers": {"total": len(LOGGERS), "noisy": sum(logger_state(l)["status"] == "noisy" for l in LOGGERS),
+                    "coverage_pct": LOGGER_COVERAGE["overall"]},
         "zones": zones, "night_flow": [{"night": t, "lps": round(v, 1)} for t, v in nights],
         "night_baseline_lps": round(base, 1), "ruleset": RULESET,
     }
@@ -1582,6 +1764,15 @@ def alert_detail(aid: str):
         sensor_pos.append({"id": sid, "latlon": [lat, lon], "trust": meter_trust(sid),
                            "drop_mm": round(a.get("dp_mm", {}).get(sid, 0), 1)})
     linked = [report_view(REPORTS[x]) for x in a.get("reports", []) if x in REPORTS]
+    # loggers in the zone: all of them for the map, the ones near the best guess or loud for the list
+    g = (a.get("search") or {}).get("best_guess")
+    logs = []
+    if a["kind"] != "public":
+        for x in zone_loggers(zone):
+            dist = round(km(g[0], g[1], x["lat"], x["lon"]) * 1000) if g else None
+            logs.append({k: x[k] for k in ("id", "status", "change_db", "loud_nights", "last_db", "usual_db")}
+                        | {"latlon": [x["lat"], x["lon"]], "distance_m": dist})
+        logs.sort(key=lambda x: (x["status"] != "noisy", x["distance_m"] if x["distance_m"] is not None else 10 ** 9))
     return {
         **public_alert_view(a), "trace": s["trace"], "notes": s["notes"], "ruleset": s["ruleset"],
         "bands": scoring.get(a.get("ruleset", RULESET))["bands"], "rejected": s["rejected"],
@@ -1589,7 +1780,8 @@ def alert_detail(aid: str):
                          "description": scoring.get(a.get("ruleset", RULESET)).get("description"),
                          "ai_cap": scoring.get(a.get("ruleset", RULESET))["caps"].get("ai_total")},
         "flow": {k: v for k, v in s["flow"].items()}, "data_quality": {"meters": used, "fixes": dict(fixes)},
-        "pressure": pressure, "areas": areas, "sensors": sensor_pos, "reports": linked,
+        "pressure": pressure, "areas": areas, "sensors": sensor_pos, "reports": linked, "loggers": logs,
+        "hearing_range_m": ACOUSTIC["hearing_range_m"],
         "model": {"leak_probability": (a.get("model") or {}).get("leak_probability"),
                   "leak_flow_lps": (a.get("search") or {}).get("flow_lps"),
                   "water_lost_m3_per_day": (a.get("search") or {}).get("m3_day"),
@@ -1666,7 +1858,11 @@ def alert_replay(aid: str):
         srch = a.get("search") or {}
         top = (srch.get("areas") or [None])[0]
         st = ", ".join(a.get("streets", [])[:2]) or "the zone"
-        if top and srch.get("source") == "model":
+        if top and top.get("from_loggers"):
+            ev.append({"t": a["created"] + 60, "tag": "Loggers", "title": "Noise loggers point to the spot",
+                       "detail": f"{', '.join(top['from_loggers'][:3])} loud and steady for 2 nights or more. "
+                                 f"Search area {top['radius_m']:.0f} m around them, near {st}."})
+        elif top and srch.get("source") == "model":
             ev.append({"t": a["created"] + 60, "tag": "AI model", "title": "Model suggests where to look",
                        "detail": f"Area {top['area']} ({top['probability']:.0%}), around {st}. About {srch.get('flow_lps')} L/s lost."})
         elif top:
@@ -1768,6 +1964,25 @@ def meters_endpoint():
     return {"meters": sorted(ms, key=lambda m: (m["trust"], m["id"])), "rules": DQ_RULES,
             "summary": {"total": len(ms), "healthy": st["healthy"], "noisy": st["noisy"] + st["drifting"],
                         "offline": st["offline"] + st["stuck"], "fixed": fixed}}
+
+
+@router.get("/loggers", dependencies=[Depends(STAFF_ONLY)])
+def loggers_endpoint(zone: Optional[str] = None):
+    """Acoustic noise loggers: where they are and how much of the pipe network they can hear."""
+    items = [{**lg, **logger_state(lid), "zone_name": ZONE_NAMES[lg["zone"]]}
+             for lid, lg in LOGGERS.items() if not zone or lg["zone"] == zone]
+    st = Counter(i["status"] for i in items)
+    return {"loggers": items, "hearing_range_m": ACOUSTIC["hearing_range_m"], "coverage": LOGGER_COVERAGE,
+            "summary": {"total": len(items), "noisy": st["noisy"], "loud_once": st["loud once"], "quiet": st["quiet"]}}
+
+
+@router.get("/loggers/{lid}", dependencies=[Depends(STAFF_ONLY)])
+def logger_detail(lid: str):
+    """One logger: where it is and its noise level for each of the last 14 nights."""
+    if lid not in LOGGERS:
+        raise HTTPException(404, "Unknown logger")
+    return {**LOGGERS[lid], **logger_state(lid), "nights": logger_levels()[lid],
+            "zone_name": ZONE_NAMES[LOGGERS[lid]["zone"]]}
 
 
 @router.get("/meters/{mid}", dependencies=[Depends(STAFF_ONLY)])
@@ -1914,7 +2129,19 @@ def job_view(j):
         "suspects": suspects(a),
         "pipes": top["pipes"] if top else [],
         "reports": job_reports(a),
+        "loggers": job_loggers(a),
     }
+
+
+def job_loggers(a):
+    """Noise loggers that hear this alert's leak (the ones the search area was built from), loudest first."""
+    out = []
+    for lid in (a.get("search") or {}).get("loggers", []):
+        if lid in LOGGERS:
+            st = logger_state(lid)
+            out.append({"id": lid, "latlon": [LOGGERS[lid]["lat"], LOGGERS[lid]["lon"]],
+                        "junction": LOGGERS[lid]["junction"], "change_db": st["change_db"], "loud_nights": st["loud_nights"]})
+    return sorted(out, key=lambda x: -x["change_db"])
 
 
 def job_reports(a):
@@ -2055,6 +2282,7 @@ def map_pipes(zone: str):
 class DemoLeakIn(BaseModel):
     pipe_id: str
     size: Literal["small", "medium", "large"] = "large"
+    nights_ago: int = Field(0, ge=0, le=5)   # 0: started 45 minutes ago. 2: running since before 3 am two nights ago
 
 
 @router.post("/demo/leak", dependencies=[Depends(ADMIN_ONLY)])
@@ -2064,7 +2292,8 @@ def demo_leak(body: DemoLeakIn):
     zone = api.PIPE_ZONE.get(body.pipe_id)
     if zone not in api.ZONES:
         raise HTTPException(400, "Pick a pipe inside a zone")
-    world_add_leak(body.pipe_id, body.size, NOW - 45 * 60)
+    started = NOW - 45 * 60 if body.nights_ago == 0 else logger_nights()[-body.nights_ago] - 3600
+    world_add_leak(body.pipe_id, body.size, started)
     refresh()
     aid = detect_zone(zone)
     flush()
@@ -2261,7 +2490,7 @@ LIVE_DEFAULT = {
     "realert_cooldown_hours": 6,    # after an alert is closed with no leak found, wait before alerting that zone again
     "burst_flow_pct": 5,            # flow in the last 30 minutes this much above usual...
     "burst_drop_mm": 60,            # ...and a pressure drop this big = burst
-    "needs_one_of": ["NF-01", "NF-03", "PR-01"],   # a direct leak sign; the 24 h water balance alone is not enough
+    "needs_one_of": ["NF-01", "NF-03", "PR-01", "AC-01"],   # a direct leak sign; the 24 h water balance alone is not enough
 }
 LIVE = load_settings("network.json", LIVE_DEFAULT)
 DB = {"store": None, "last_flush": 0}
@@ -2431,6 +2660,8 @@ def detect_zone(zone):
     a = {"id": uuid.uuid4().hex[:8], "zone": zone, "kind": kind, "status": "open", "started": _started_estimate(zone, kind),
          "created": NOW, "model": pred or {}, "model_status": status, "search": search, "dp_mm": dp,
          "streets": streets_of(top_pipes), "reports": [], "job": None, "events": [], "ruleset": RULESET}
+    apply_loggers(a)
+    a["streets"] = streets_of(a["search"]["areas"][0]["pipes"]) if a["search"].get("areas") else a["streets"]
     with LOCK:
         ALERTS[a["id"]] = a
         sc = score_alert(a)
@@ -2447,6 +2678,9 @@ def detect_zone(zone):
 
 
 def scan_all():
+    with LOCK:
+        for a in ALERTS.values():
+            apply_loggers(a)
     out = [aid for z in api.ZONES if (aid := detect_zone(z))]
     LIVE_STATE.update(last_scan=NOW, scans=LIVE_STATE["scans"] + 1)
     return out

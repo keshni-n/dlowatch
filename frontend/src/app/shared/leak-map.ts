@@ -23,6 +23,8 @@ export class LeakMap implements AfterViewInit, OnDestroy {
   pickable = input(false);
   pipesClickable = input(false);
   height = input(420);
+  /** Optional: with fitTo 'circles', zoom to this one circle instead of everything drawn. */
+  fitCircle = input<number | null>(null);
   fitTo = input<'zones' | 'pipes' | 'circles' | 'pin'>('zones');
   /** Optional: colour zones by another property (e.g. public "status") instead of leak level. */
   zoneProp = input('level');
@@ -131,11 +133,13 @@ export class LeakMap implements AfterViewInit, OnDestroy {
   private drawCircles(circles: MapCircle[], points: MapPoint[]) {
     if (!this.map) return;
     const g = L.featureGroup();
-    for (const c of circles) {
+    let focus: L.Circle | null = null;
+    for (const [i, c] of circles.entries()) {
       const circle = L.circle(c.latlon, {
         radius: c.radius_m, color: c.color, weight: 2, fillColor: c.color, fillOpacity: 0.08, dashArray: c.dashed ? '6 6' : undefined,
       });
       if (c.label) circle.bindTooltip(c.label, { sticky: true });
+      if (i === this.fitCircle()) focus = circle;
       g.addLayer(circle);
     }
     for (const p of points) {
@@ -146,7 +150,7 @@ export class LeakMap implements AfterViewInit, OnDestroy {
       g.addLayer(m);
     }
     this.swap('circles', circles.length || points.length ? g : null);
-    if (circles.length || points.length) this.fit('circles', g.getBounds());
+    if (circles.length || points.length) this.fit('circles', focus ? focus.getBounds().pad(0.6) : g.getBounds());
   }
 
   private drawPin(pin: [number, number] | null) {

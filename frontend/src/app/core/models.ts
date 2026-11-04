@@ -45,7 +45,7 @@ export interface FlowStats {
   now_lps: number; usual_now_lps: number; now_pct: number;
 }
 
-export interface Area { area: string; probability: number | null; centre_latlon: [number, number]; radius_m: number; pipes: string[]; streets: string[]; from_sensors?: string[]; }
+export interface Area { area: string; probability: number | null; centre_latlon: [number, number]; radius_m: number; pipes: string[]; streets: string[]; from_sensors?: string[]; from_loggers?: string[]; }
 
 export interface AlertDetail extends AlertItem {
   if_not_fixed: { m3_per_day: number; week_m3: number; month_m3: number; year_m3: number; olympic_pools_per_year: number;
@@ -55,6 +55,9 @@ export interface AlertDetail extends AlertItem {
   flow: FlowStats; data_quality: { meters: { id: string; type: string; trust: number; drop_mm?: number }[]; fixes: Record<string, number> };
   pressure: (Series & { id: string })[]; areas: Area[];
   sensors: { id: string; latlon: [number, number]; trust: number; drop_mm: number }[];
+  loggers: { id: string; latlon: [number, number]; status: LoggerStatus; change_db: number; loud_nights: number;
+             last_db: number; usual_db: number; distance_m: number | null }[];
+  hearing_range_m: number;
   reports: PublicReportRow[];
   model: { leak_probability: number; leak_flow_lps?: number; water_lost_m3_per_day?: number; best_guess_latlon?: [number, number] };
   demo_truth?: { pipe_id: string; leak_flow_lps: number; water_lost_m3_per_day: number; latlon: [number, number] };
@@ -73,6 +76,7 @@ export interface Overview {
   now: number; water_in_m3: number; expected_m3: number; extra_m3: number; extra_pct: number;
   alerts: AlertItem[]; levels: Partial<Record<Level, number>>;
   meters: { total: number; healthy: number; noisy: number; offline: number };
+  loggers: { total: number; noisy: number; coverage_pct: number };
   zones: ZoneSummary[]; night_flow: { night: number; lps: number }[]; night_baseline_lps: number;
   ruleset: string;
 }
@@ -82,6 +86,16 @@ export interface MeterRow {
   fixes: Record<string, number>; issues: string; used: 'yes' | 'half' | 'no'; problem: string;
 }
 export interface DqRule { code: string; name: string; looks: string; fix: string; }
+export type LoggerStatus = 'noisy' | 'loud once' | 'quiet';
+export interface Logger {
+  id: string; zone: string; zone_name: string; junction: string; lat: number; lon: number; main_road: boolean;
+  last_db: number; usual_db: number; change_db: number; loud_nights: number; status: LoggerStatus;
+}
+export interface LoggersResponse {
+  loggers: Logger[]; hearing_range_m: number; coverage: { zones: Record<string, number>; overall: number };
+  summary: { total: number; noisy: number; loud_once: number; quiet: number };
+}
+export interface LoggerDetail extends Logger { nights: { night: number; db: number }[]; }
 export interface MetersResponse { meters: MeterRow[]; rules: DqRule[]; summary: { total: number; healthy: number; noisy: number; offline: number; fixed: number }; }
 export interface MeterDetail {
   id: string; zone: string; zone_name: string; type: string; unit: string; status: string; trust: number;
@@ -106,6 +120,7 @@ export interface Job {
   score: number; level: Level; why: string; reasons: string[]; streets: string[];
   latlon: [number, number] | null; search_radius_m: number | null; pipes: string[]; suspects: Suspect[];
   reports: JobReport[];
+  loggers?: { id: string; latlon: [number, number]; junction: string; change_db: number; loud_nights: number }[];
 }
 export interface JobReport {
   code: string; created: number; kind_en: string; kind_kreol: string; note: string | null;
