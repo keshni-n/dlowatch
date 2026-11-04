@@ -1190,3 +1190,250 @@ def next_3am(t):
     return at - 4 * 3600
 
 
+# ============================================================== public reports
+REPORT_KINDS = {"water_on_road": ("Dlo lor semin", "Water on the road"),
+                "broken_pipe": ("Tiyo kase", "Broken pipe"),
+                "no_water": ("Pa ena dlo", "No water at home"),
+                "low_pressure": ("Presion feb", "Low pressure")}
+CODE_COUNTER = {"n": 4820}
+
+
+class ReportIn(BaseModel):
+    lat: float = Field(ge=-20.6, le=-19.9)
+    lon: float = Field(ge=57.2, le=57.9)
+    kind: Literal["water_on_road", "broken_pipe", "no_water", "low_pressure"]
+    note: Optional[str] = Field(None, max_length=300)
+    device: str = Field(min_length=6, max_length=64, description="random id the phone keeps, not personal")
+    photo: Optional[str] = Field(None, description="data URL of a photo, optional", max_length=3_000_000)
+
+
+def add_report(body: ReportIn, at=None):
+    with LOCK:
+        CODE_COUNTER["n"] += 1
+        code = f"R-{CODE_COUNTER['n']}"
+        zone = point_in_zone(body.lat, body.lon)
+        r = {"code": code, "created": at or int(time.time()), "lat": round(body.lat, 4), "lon": round(body.lon, 4),
+             "kind": body.kind, "note": body.note, "device": hashlib.sha256(body.device.encode()).hexdigest()[:12],
+             "photo": body.photo, "zone": zone, "alert": None, "cluster": None}
+        REPORTS[code] = r
+        link_report(r)
+        return r
+
+
+def link_report(r):
+    """Attach a report to an open alert nearby, or group it with other reports."""
+    best = None
+    for a in ALERTS.values():
+        if a["status"] != "open" or a["zone"] != r["zone"]:
+            continue
+        pts = []
+        srch = a.get("search") or {}
+        if srch.get("best_guess"):
+            pts.append((srch["best_guess"], 1.5))
+        for ar in srch.get("areas", []):
+            pts.append((ar["centre_latlon"], ar["radius_m"] / 1000 + 0.3))
+        if a.get("latlon"):
+            pts.append((a["latlon"], 0.3))
+        for (lat, lon), reach in pts:
+            d = km(r["lat"], r["lon"], lat, lon)
+            if d <= reach and (best is None or d < best[0]):
+                best = (d, a["id"])
+    if best:
+        r["alert"] = best[1]
+        ALERTS[best[1]]["reports"].append(r["code"])
+        return
+    # no alert: look for other reports within 150 m in the last 24 h
+    near = [x for x in REPORTS.values() if x["code"] != r["code"] and x["alert"] is None
+            and km(r["lat"], r["lon"], x["lat"], x["lon"]) <= 0.15 and r["created"] - x["created"] <= 86400]
+    group = near + [r]
+    if len({x["device"] for x in group}) >= 3:
+        aid = uuid.uuid4().hex[:8]
+        lat = sum(x["lat"] for x in group) / len(group)
+        lon = sum(x["lon"] for x in group) / len(group)
+        ALERTS[aid] = {"id": aid, "zone": r["zone"] or "Z1", "kind": "public", "status": "open",
+                       "started": min(x["created"] for x in group), "created": r["created"],
+                       "model": {}, "model_status": "ok", "ruleset": RULESET,
+                       "search": {"source": "reports", "best_guess": [lat, lon], "areas": [], "flow_lps": None, "m3_day": None},
+                       "dp_mm": {}, "latlon": [lat, lon],
+                       "streets": [], "reports": [x["code"] for x in group], "job": None, "events": []}
+        for x in group:
+            x["alert"] = aid
+
+
+PUBLIC_DEFAULT = {"max_reports_per_phone_per_hour": 5, "max_reports_per_phone_per_day": 15, "same_photo_block_hours": 24}
+PUBLIC = load_settings("public.json", PUBLIC_DEFAULT)
+EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+(\.[\w-]+)+")
+PHONE_RE = re.compile(r"(\+?\d[\d\s-]{6,}\d)")
+
+
+def clean_note(note):
+    """Remove emails and phone numbers from a public note. Returns (note, removed_anything)."""
+    if not note:
+        return note, False
+    out = EMAIL_RE.sub("[removed]", note)
+    out = PHONE_RE.sub(lambda m: "[removed]" if sum(c.isdigit() for c in m.group(0)) >= 7 else m.group(0), out)
+    return out.strip(), out != note
+
+
+def photo_hash(photo):
+    return hashlib.sha256(photo.encode()).hexdigest()[:16] if photo else None
+
+
+@router.post("/public/reports")
+def public_report(body: ReportIn):
+    now = int(time.time())
+    dev = hashlib.sha256(body.device.encode()).hexdigest()[:12]
+    mine = [r for r in REPORTS.values() if r["device"] == dev]
+    if len([r for r in mine if now - r["created"] < 3600]) >= PUBLIC["max_reports_per_phone_per_hour"]:
+        raise HTTPException(429, "You have sent several reports in the last hour. Thank you, we have them. "
+                                 "If water is flooding a road, call the hotline.")
+    if len([r for r in mine if now - r["created"] < 86400]) >= PUBLIC["max_reports_per_phone_per_day"]:
+        raise HTTPException(429, "Daily limit of reports from this phone reached. If it is urgent, call the hotline.")
+    h = photo_hash(body.photo)
+    if h and any(r.get("photo_hash") == h and now - r["created"] < PUBLIC["same_photo_block_hours"] * 3600
+                 for r in REPORTS.values()):
+        raise HTTPException(409, "This photo was already sent with another report. Please take a new photo, or send without one.")
+    note, cleaned = clean_note(body.note)
+    r = add_report(body.model_copy(update={"note": note}))
+    r["photo_hash"] = h
+    return {"code": r["code"], "status": public_status(r), "note_cleaned": cleaned}
+
+
+def public_status(r):
+    a = ALERTS.get(r["alert"]) if r["alert"] else None
+    job = JOBS.get(a["job"]) if a and a.get("job") else None
+    fixed = bool(a and a["status"] == "resolved")
+    steps = [
+        {"key": "received", "kreol": "Rapor resevwar", "fr": "Rapport recu", "en": "Received", "done": True,
+         "at": r["created"]},
+        {"key": "linked", "kreol": "Lie avek enn lalert", "fr": "Lie a une alerte", "en": "Linked to a leak alert",
+         "done": a is not None, "at": a["created"] if a else None},
+        {"key": "crew", "kreol": "Lekip pe vini", "fr": "Equipe en route", "en": "Crew on the way",
+         "done": job is not None, "at": job["created"] if job else None},
+        {"key": "fixed", "kreol": "Fwit repare", "fr": "Fuite reparee", "en": "Leak fixed",
+         "done": fixed, "at": a.get("resolved") if fixed else None},
+    ]
+    others = 0
+    if a:
+        others = len({REPORTS[c]["device"] for c in a["reports"] if c in REPORTS and c != r["code"]})
+    return {"code": r["code"], "created": r["created"], "kind": r["kind"],
+            "area": ZONE_NAMES.get(r["zone"], "Outside the network") if r["zone"] else "Outside the network",
+            "others_nearby": others, "steps": steps}
+
+
+@router.get("/public/reports/{code}")
+def public_report_status(code: str):
+    r = REPORTS.get(code.strip().upper())
+    if not r:
+        raise HTTPException(404, "No report with this code")
+    return public_status(r)
+
+
+@router.get("/public/info")
+def public_info():
+    # contact details come from the environment, so nothing invented ends up on the public page
+    return {"kinds": [{"key": k, "kreol": v[0], "en": v[1]} for k, v in REPORT_KINDS.items()],
+            "area": "North Mauritius",
+            "hotline": os.environ.get("DLOWATCH_HOTLINE") or None,
+            "utility": os.environ.get("DLOWATCH_UTILITY_NAME") or None}
+
+
+# ---------------------------------------------------------------- public area notices
+# What the public may see: a simple status per area. Never scores, meter data or crew details.
+PUBLIC_FIXED_HOURS = 48          # how long "fixed recently" stays on the map
+
+
+def public_notice(a, now):
+    """Turn one alert into a public notice, or None if the public should not see it."""
+    if a["status"] == "resolved":
+        job = JOBS.get(a.get("job")) if a.get("job") else None
+        if job and job.get("outcome") == "leak_found" and now - (a.get("resolved") or 0) <= PUBLIC_FIXED_HOURS * 3600:
+            return "fixed", a.get("resolved")
+        return None
+    job = JOBS.get(a.get("job")) if a.get("job") else None
+    if job and job["status"] in ("sent", "on_the_way", "on_site"):
+        return "crew", job["created"]
+    level = score_alert(a)["level"]
+    if level in ("high", "critical") or (a["kind"] == "public" and len(a.get("reports", [])) >= 3):
+        return "checking", a["created"]
+    return None
+
+
+STATUS_RANK = {"crew": 3, "checking": 2, "fixed": 1, "normal": 0}
+
+
+def notice_place(a):
+    ll = (a.get("search") or {}).get("best_guess") or a.get("latlon")
+    return [round(ll[0], 4), round(ll[1], 4)] if ll else None
+
+
+def public_notices(now=None):
+    now = now or int(time.time())
+    out = []
+    for a in ALERTS.values():
+        n = public_notice(a, now)
+        if not n:
+            continue
+        status, since = n
+        out.append({"id": a["id"], "zone": a["zone"], "area": ZONE_NAMES.get(a["zone"], a["zone"]),
+                    "status": status, "since": since, "street": (a.get("streets") or [None])[0],
+                    "latlon": notice_place(a), "burst": a["kind"] == "burst"})
+    return sorted(out, key=lambda n: (-STATUS_RANK[n["status"]], -(n["since"] or 0)))
+
+
+@router.get("/public/areas")
+def public_areas():
+    notices = public_notices()
+    by_zone = {}
+    for n in notices:
+        cur = by_zone.get(n["zone"])
+        if cur is None or STATUS_RANK[n["status"]] > STATUS_RANK[cur]:
+            by_zone[n["zone"]] = n["status"]
+    feats = []
+    for f in api.GEO["zones"]["features"]:
+        z = f["properties"]["zone"]
+        ring = [[round(x, 4), round(y, 4)] for x, y in f["geometry"]["coordinates"][0]]
+        feats.append({"type": "Feature", "geometry": {"type": "Polygon", "coordinates": [ring]},
+                      "properties": {"zone": z, "name": ZONE_NAMES.get(z, z), "status": by_zone.get(z, "normal")}})
+    return {"areas": {"type": "FeatureCollection", "features": feats}, "notices": notices, "updated": int(time.time())}
+
+
+@router.get("/public/nearby")
+def public_nearby(lat: float, lon: float, radius_m: int = 600):
+    """Is there already a known problem close to this spot? Used before sending a report."""
+    zone = point_in_zone(lat, lon)
+    best = None
+    for n in public_notices():
+        if not n["latlon"] or n["status"] == "fixed":
+            continue
+        d = km(lat, lon, n["latlon"][0], n["latlon"][1]) * 1000
+        if d <= radius_m and (best is None or d < best["distance_m"]):
+            best = {**n, "distance_m": round(d)}
+    return {"zone": zone, "area": ZONE_NAMES.get(zone) if zone else None, "inside_network": zone is not None,
+            "known": best}
+
+
+@router.get("/public/stats")
+def public_stats():
+    now = int(time.time())
+    week = [r for r in REPORTS.values() if now - r["created"] <= 7 * 86400]
+    fixed = [a for a in ALERTS.values() if a["status"] == "resolved" and a.get("job")
+             and JOBS.get(a["job"], {}).get("outcome") == "leak_found" and now - (a.get("resolved") or 0) <= 30 * 86400]
+    saved = sum(((a.get("search") or {}).get("m3_day") or 0) for a in fixed)
+    hours = [(a["resolved"] - a["created"]) / 3600 for a in fixed if a.get("resolved") and a.get("created")]
+    return {"reports_7d": len(week), "leaks_fixed_30d": len(fixed),
+            "water_saved_m3_per_day": round(saved), "avg_fix_hours": round(sum(hours) / len(hours), 1) if hours else None,
+            "open_notices": len([n for n in public_notices() if n["status"] != "fixed"])}
+
+
+@router.get("/public/reports-batch")
+def public_reports_batch(codes: str):
+    """Status of several reports at once (the phone keeps the codes it sent). Unknown codes are skipped."""
+    out = []
+    for c in codes.split(",")[:30]:
+        r = REPORTS.get(c.strip().upper())
+        if r:
+            out.append(public_status(r))
+    return out
+
+
