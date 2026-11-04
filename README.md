@@ -57,7 +57,8 @@ npm start
 
 Open http://localhost:4200. `npm start` forwards `/api` to the backend on port 8000.
 
-**On a phone (same Wi-Fi):** run `npm start -- --host 0.0.0.0` and open the "Network" address it prints.
+**On a phone (same Wi-Fi):** run `npm run phone` and open `https://<laptop IP>:4200` (tap Advanced, then Proceed, at the certificate warning).
+It uses https so the phone shares its location, and turns off live reload: otherwise the page reloads when you come back from the camera and the report is lost.
 
 ## Public side (no login)
 
@@ -241,6 +242,15 @@ Finding the place, 2019, on the night the alert opened (13 leaks). The model was
 The town is only about 2.7 km by 1.4 km, so this is still rough: say so in the pitch. The 2019 sensor files are on Zenodo, which was not reachable, so the data was rebuilt from the official network and leak list (EPANET instead of WNTR). Full write-up: `backend/evaluation/battledim.md`. To run it yourself: `backend/battledim/README.md`.
 
 Limits, say these in the pitch: everything is simulated on an illustrative network; the model was trained on the same network; the meter faults tested are the kinds the cleaning step was built for; one leak at a time. Expect more false alarms and a bigger distance on real CWA data. The BattLeDIM test above shows what happens with realistic demand.
+
+## Photo check on the phone
+
+When someone takes a photo on the Report page, the phone checks it before sending (`frontend/src/app/shared/photo-check.ts`):
+
+- **Too dark**, **nearly blank** (camera covered) or **blurry**: the person sees why, with **Retake** or **Keep it anyway**. Nothing is ever blocked.
+- The result goes with the report as a hint. Staff see it under the photo on Public reports ("Photo check: blurry (sent anyway)"), and crews see it on the job. It never changes the score, and the server does not trust it.
+- Limits are lenient on purpose, so a dark photo of a real burst at night still passes.
+- **A trained model can be added later:** put it in `PHOTO_MODEL` in `photo-check.ts` (for example a small MobileNet trained on "water or leak", "pipe", "not relevant" photos). It then also warns when a photo for "Water on the road" or "Broken pipe" does not look relevant. Until then only the simple checks run.
 
 ## Public report safety
 
