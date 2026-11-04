@@ -19,7 +19,7 @@ How the live network behaves: leaks per day (whole network), size mix (large one
 
 ## public.json
 
-Limits for public reports: reports per phone per hour and per day, and how long the same photo is refused.
+Limits for public reports: reports per phone per hour and per day, and how long the same photo is refused. `zone_snap_m`: a spot just outside every zone outline still belongs to the nearest zone when one of its pipes is this close (default 400 m).
 
 ## acoustic.json
 

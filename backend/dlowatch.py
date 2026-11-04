@@ -265,7 +265,42 @@ def zone_label(z):
     return f"{ZONE_NAMES.get(z, z)} ({z})"
 
 
+_ZONE_PTS = {}
+
+
+def nearest_zone(lat, lon):
+    """The zone whose pipe junctions are closest to this spot, and how far the closest one is (m)."""
+    if not _ZONE_PTS:
+        for f in api.GEO["nodes"]["features"]:
+            p = f["properties"]
+            if p["id"].startswith("J_") and p.get("zone") in api.ZONES:
+                _ZONE_PTS.setdefault(p["zone"], []).append(f["geometry"]["coordinates"])
+        for z in list(_ZONE_PTS):
+            _ZONE_PTS[z] = np.array(_ZONE_PTS[z])
+    kx = 111320 * math.cos(math.radians(lat))
+    best = (None, float("inf"))
+    for z, pts in _ZONE_PTS.items():
+        d = float(np.sqrt((((pts[:, 0] - lon) * kx) ** 2 + ((pts[:, 1] - lat) * 110540) ** 2).min()))
+        if d < best[1]:
+            best = (z, d)
+    return best
+
+
 def point_in_zone(lat, lon):
+    """
+    The zone a spot belongs to. Inside a zone outline, that zone. Just outside every outline (the outlines
+    hug the pipes, so homes at a zone's edge or in the gap between two zones fall out), the zone with a pipe
+    junction within zone_snap_m. Farther than that: None, outside the service area.
+    """
+    z = _inside_outline(lat, lon)
+    if z:
+        return z
+    near, dist = nearest_zone(lat, lon)
+    snap = (globals().get("PUBLIC") or {}).get("zone_snap_m", 400)
+    return near if dist <= snap else None
+
+
+def _inside_outline(lat, lon):
     for f in api.GEO["zones"]["features"]:
         ring = f["geometry"]["coordinates"][0]
         inside, j = False, len(ring) - 1
@@ -1445,7 +1480,8 @@ def link_report(r):
             x["alert"] = aid
 
 
-PUBLIC_DEFAULT = {"max_reports_per_phone_per_hour": 5, "max_reports_per_phone_per_day": 15, "same_photo_block_hours": 24}
+PUBLIC_DEFAULT = {"max_reports_per_phone_per_hour": 5, "max_reports_per_phone_per_day": 15, "same_photo_block_hours": 24,
+                  "zone_snap_m": 400}
 PUBLIC = load_settings("public.json", PUBLIC_DEFAULT)
 EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+(\.[\w-]+)+")
 PHONE_RE = re.compile(r"(\+?\d[\d\s-]{6,}\d)")

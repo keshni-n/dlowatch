@@ -2,5 +2,7 @@
   "_note": "Limits for public reports, to stop spam. A phone is identified by a random id it keeps, not by personal data.",
   "max_reports_per_phone_per_hour": 5,
   "max_reports_per_phone_per_day": 15,
-  "same_photo_block_hours": 24
+  "same_photo_block_hours": 24,
+  "zone_snap_m": 400,
+  "_snap_note": "A spot just outside every zone outline still belongs to the nearest zone if one of its pipes is within this many metres."
 }
