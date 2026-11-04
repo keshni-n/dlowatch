@@ -36,6 +36,7 @@ import wntr
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
+import acoustic
 import api  # the existing backend: network, models, EPANET leak simulation
 import scoring
 import store
@@ -339,6 +340,12 @@ def meters():
 
 
 METERS = {m["id"]: m for m in meters()}
+
+# Acoustic noise loggers: a third kind of sensor, next to the flow and pressure meters (see acoustic.py)
+ACOUSTIC = acoustic.load_settings(SETTINGS_DIR)
+LOGGERS = acoustic.place_loggers(api.GEO, api.ZONES, ACOUSTIC)
+LOGGER_COVERAGE = acoustic.pipe_coverage(api.GEO, LOGGERS, ACOUSTIC)
+log.info("%d acoustic loggers, %d%% of pipe length within hearing range", len(LOGGERS), LOGGER_COVERAGE["overall"])
 
 
 def pick_fault_meters():
@@ -1768,6 +1775,14 @@ def meters_endpoint():
     return {"meters": sorted(ms, key=lambda m: (m["trust"], m["id"])), "rules": DQ_RULES,
             "summary": {"total": len(ms), "healthy": st["healthy"], "noisy": st["noisy"] + st["drifting"],
                         "offline": st["offline"] + st["stuck"], "fixed": fixed}}
+
+
+@router.get("/loggers", dependencies=[Depends(STAFF_ONLY)])
+def loggers_endpoint(zone: Optional[str] = None):
+    """Acoustic noise loggers: where they are and how much of the pipe network they can hear."""
+    items = [lg for lg in LOGGERS.values() if not zone or lg["zone"] == zone]
+    return {"loggers": items, "hearing_range_m": ACOUSTIC["hearing_range_m"], "coverage": LOGGER_COVERAGE,
+            "summary": {"total": len(items)}}
 
 
 @router.get("/meters/{mid}", dependencies=[Depends(STAFF_ONLY)])
