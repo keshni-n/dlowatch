@@ -2089,7 +2089,19 @@ def job_view(j):
         "suspects": suspects(a),
         "pipes": top["pipes"] if top else [],
         "reports": job_reports(a),
+        "loggers": job_loggers(a),
     }
+
+
+def job_loggers(a):
+    """Noise loggers that hear this alert's leak (the ones the search area was built from), loudest first."""
+    out = []
+    for lid in (a.get("search") or {}).get("loggers", []):
+        if lid in LOGGERS:
+            st = logger_state(lid)
+            out.append({"id": lid, "latlon": [LOGGERS[lid]["lat"], LOGGERS[lid]["lon"]],
+                        "junction": LOGGERS[lid]["junction"], "change_db": st["change_db"], "loud_nights": st["loud_nights"]})
+    return sorted(out, key=lambda x: -x["change_db"])
 
 
 def job_reports(a):

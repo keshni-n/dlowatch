@@ -120,6 +120,7 @@ export interface Job {
   score: number; level: Level; why: string; reasons: string[]; streets: string[];
   latlon: [number, number] | null; search_radius_m: number | null; pipes: string[]; suspects: Suspect[];
   reports: JobReport[];
+  loggers?: { id: string; latlon: [number, number]; junction: string; change_db: number; loud_nights: number }[];
 }
 export interface JobReport {
   code: string; created: number; kind_en: string; kind_kreol: string; note: string | null;
