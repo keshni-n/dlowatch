@@ -1230,7 +1230,8 @@ def score_alert(a):
         out["notes"].append(f"Inlet meter trust is {fs['inlet_trust']}%, so its signals count for half.")
     if a.get("model_status") in ("off", "unavailable") and a["kind"] != "public":
         out["notes"].append("AI assist was " + ("switched off" if a["model_status"] == "off" else "not available")
-                            + " for this alert. Scored by the rules only, search area from the pressure sensors.")
+                            + " for this alert. Scored by the rules only, search area from the "
+                            + ("noise loggers." if (a.get("search") or {}).get("loggers") else "pressure sensors."))
     return {**out, "rejected": rejected, "ruleset": rs["version"], "flow": fs}
 
 
@@ -1647,6 +1648,8 @@ def overview():
         "alerts": alerts, "levels": dict(levels),
         "meters": {"total": len(ms), "healthy": st["healthy"], "noisy": st["noisy"] + st["drifting"],
                    "offline": st["offline"] + st["stuck"]},
+        "loggers": {"total": len(LOGGERS), "noisy": sum(logger_state(l)["status"] == "noisy" for l in LOGGERS),
+                    "coverage_pct": LOGGER_COVERAGE["overall"]},
         "zones": zones, "night_flow": [{"night": t, "lps": round(v, 1)} for t, v in nights],
         "night_baseline_lps": round(base, 1), "ruleset": RULESET,
     }
@@ -1708,6 +1711,15 @@ def alert_detail(aid: str):
         sensor_pos.append({"id": sid, "latlon": [lat, lon], "trust": meter_trust(sid),
                            "drop_mm": round(a.get("dp_mm", {}).get(sid, 0), 1)})
     linked = [report_view(REPORTS[x]) for x in a.get("reports", []) if x in REPORTS]
+    # loggers in the zone: all of them for the map, the ones near the best guess or loud for the list
+    g = (a.get("search") or {}).get("best_guess")
+    logs = []
+    if a["kind"] != "public":
+        for x in zone_loggers(zone):
+            dist = round(km(g[0], g[1], x["lat"], x["lon"]) * 1000) if g else None
+            logs.append({k: x[k] for k in ("id", "status", "change_db", "loud_nights", "last_db", "usual_db")}
+                        | {"latlon": [x["lat"], x["lon"]], "distance_m": dist})
+        logs.sort(key=lambda x: (x["status"] != "noisy", x["distance_m"] if x["distance_m"] is not None else 10 ** 9))
     return {
         **public_alert_view(a), "trace": s["trace"], "notes": s["notes"], "ruleset": s["ruleset"],
         "bands": scoring.get(a.get("ruleset", RULESET))["bands"], "rejected": s["rejected"],
@@ -1715,7 +1727,8 @@ def alert_detail(aid: str):
                          "description": scoring.get(a.get("ruleset", RULESET)).get("description"),
                          "ai_cap": scoring.get(a.get("ruleset", RULESET))["caps"].get("ai_total")},
         "flow": {k: v for k, v in s["flow"].items()}, "data_quality": {"meters": used, "fixes": dict(fixes)},
-        "pressure": pressure, "areas": areas, "sensors": sensor_pos, "reports": linked,
+        "pressure": pressure, "areas": areas, "sensors": sensor_pos, "reports": linked, "loggers": logs,
+        "hearing_range_m": ACOUSTIC["hearing_range_m"],
         "model": {"leak_probability": (a.get("model") or {}).get("leak_probability"),
                   "leak_flow_lps": (a.get("search") or {}).get("flow_lps"),
                   "water_lost_m3_per_day": (a.get("search") or {}).get("m3_day"),
@@ -1899,7 +1912,8 @@ def meters_endpoint():
 @router.get("/loggers", dependencies=[Depends(STAFF_ONLY)])
 def loggers_endpoint(zone: Optional[str] = None):
     """Acoustic noise loggers: where they are and how much of the pipe network they can hear."""
-    items = [{**lg, **logger_state(lid)} for lid, lg in LOGGERS.items() if not zone or lg["zone"] == zone]
+    items = [{**lg, **logger_state(lid), "zone_name": ZONE_NAMES[lg["zone"]]}
+             for lid, lg in LOGGERS.items() if not zone or lg["zone"] == zone]
     st = Counter(i["status"] for i in items)
     return {"loggers": items, "hearing_range_m": ACOUSTIC["hearing_range_m"], "coverage": LOGGER_COVERAGE,
             "summary": {"total": len(items), "noisy": st["noisy"], "loud_once": st["loud once"], "quiet": st["quiet"]}}

@@ -36,7 +36,7 @@ const AREA_COLORS = ['#E8590C', '#B9351C', '#7F95A6'];
               <div class="label">{{ a.model.leak_flow_lps ? (a.model.leak_flow_lps | num: 2) + ' L/s, ' + (a.search_source === 'model' ? 'AI estimate' : 'from the inlet meter') : 'No estimate' }}</div></div>
             <div class="stat"><div class="label">Most likely spot</div>
               <div class="v small-v">{{ a.areas[0]?.streets?.slice(0, 2)?.join(', ') || (a.kind === 'public' ? 'Where people reported' : '–') }}</div>
-              <div class="label">{{ a.areas[0] ? (a.areas[0].from_sensors ? 'Around sensor ' + a.areas[0].from_sensors[0] : 'Area ' + a.areas[0].area) + ', ' + (a.areas[0].radius_m | num) + ' m radius' : '' }}</div></div>
+              <div class="label">{{ a.areas[0] ? (a.areas[0].from_loggers ? 'Leak noise at ' + a.areas[0].from_loggers[0] : a.areas[0].from_sensors ? 'Around sensor ' + a.areas[0].from_sensors[0] : 'Area ' + a.areas[0].area) + ', ' + (a.areas[0].radius_m | num) + ' m radius' : '' }}</div></div>
           </div>
         </section>
 
@@ -52,7 +52,7 @@ const AREA_COLORS = ['#E8590C', '#B9351C', '#7F95A6'];
         @if (a.model_status !== 'ok' && a.kind !== 'public') {
           <section class="offline" role="status">
             <b>{{ a.model_status === 'off' ? 'AI assist was switched off' : 'AI assist was not available' }}</b>
-            for this alert. The rules raised it from the meters alone, and the search area is around the sensor with the biggest pressure drop.
+            for this alert. The rules raised it from the meters alone, and the search area is {{ a.areas[0]?.from_loggers ? 'around the noise loggers that hear the leak' : 'around the sensor with the biggest pressure drop' }}.
           </section>
         }
 
@@ -140,8 +140,8 @@ const AREA_COLORS = ['#E8590C', '#B9351C', '#7F95A6'];
         <section class="row two">
           <div class="card map-card">
             <div class="row between"><h2>Where to look</h2>
-              <span class="small muted">Orange pipes: {{ a.suspects.length ? 'block ' + pick() + ' in the list' : 'search area 1' }}. Circles: search areas. Dots: sensors (darker = bigger drop).</span></div>
-            <dw-leak-map [pipes]="pipes()" [highlightPipes]="highlight()" [circles]="circles()" [points]="points()" [height]="460" fitTo="circles" />
+              <span class="small muted">Orange pipes: {{ a.suspects.length ? 'block ' + pick() + ' in the list' : 'search area 1' }}. Circles: search areas. Blue dots: pressure sensors (darker = bigger drop). Purple: noise loggers (dark = leak noise).</span></div>
+            <dw-leak-map [pipes]="pipes()" [highlightPipes]="highlight()" [circles]="circles()" [points]="points()" [height]="460" fitTo="circles" [fitCircle]="a.areas[0]?.from_loggers ? 0 : null" />
           </div>
           <div class="card side stack">
             <h2>What to do next</h2>
@@ -186,6 +186,17 @@ const AREA_COLORS = ['#E8590C', '#B9351C', '#7F95A6'];
               <a class="btn secondary" [routerLink]="['/dashboard/replay', a.id]">Replay this leak</a>
             }
             @if (msg()) { <div class="success">{{ msg() }}</div> }
+
+            @if (nearLoggers().length) {
+              <h3>Noise loggers nearby</h3>
+              @for (l of nearLoggers(); track l.id) {
+                <div class="small row nowrap between">
+                  <span><span class="mono"><b>{{ l.id }}</b></span> · {{ l.distance_m === null ? '' : l.distance_m < 30 ? 'at the best guess' : (l.distance_m | num) + ' m away' }}</span>
+                  <span class="pill" [class]="l.status === 'noisy' ? 'high' : l.status === 'loud once' ? 'watch' : 'low'">{{ loggerText(l) }}</span>
+                </div>
+              }
+              <a class="small" routerLink="/dashboard/loggers">All noise loggers</a>
+            }
 
             @if (a.reports.length) {
               <h3>Public reports ({{ a.reports.length }})</h3>
@@ -306,7 +317,8 @@ export class AlertDetailPage {
   });
   circles = computed<MapCircle[]>(() => (this.a()?.areas ?? []).map((ar, i) => ({
     latlon: ar.centre_latlon, radius_m: ar.radius_m, color: AREA_COLORS[i] ?? '#7F95A6', dashed: i > 0,
-    label: ar.probability !== null ? `Area ${ar.area}: ${Math.round(ar.probability * 100)}% likely` : `Search area around sensor ${ar.from_sensors?.[0] ?? ''}`,
+    label: ar.probability !== null ? `Area ${ar.area}: ${Math.round(ar.probability * 100)}% likely`
+      : ar.from_loggers ? `Leak noise heard by ${ar.from_loggers.join(', ')}` : `Search area around sensor ${ar.from_sensors?.[0] ?? ''}`,
   })));
   points = computed<MapPoint[]>(() => {
     const a = this.a();
@@ -316,6 +328,12 @@ export class AlertDetailPage {
       latlon: s.latlon, color: shade(s.drop_mm / max), size: 6,
       label: `${s.id}: ${s.drop_mm} mm drop, trust ${s.trust}%`,
     }));
+    // noise loggers within 2 km of the best guess, quiet ones first so loud ones are drawn on top
+    const near = (a.loggers ?? []).filter(l => l.distance_m === null || l.distance_m <= 2000);
+    for (const l of [...near].reverse()) {
+      pts.push({ latlon: l.latlon, color: LOGGER_COLOR[l.status], size: l.status === 'noisy' ? 8 : l.status === 'loud once' ? 6 : 4,
+        ring: l.status === 'noisy' ? '#0F1B24' : undefined, label: `${l.id}: ${this.loggerText(l).toLowerCase()}` });
+    }
     for (const r of a.reports) pts.push({ latlon: [r.lat, r.lon], color: '#2F8F5B', size: 6, label: `${r.code}: ${r.kind_en}` });
     const g = a.model.best_guess_latlon ?? a.best_guess_latlon;
     if (g) pts.push({ latlon: g, color: '#E8590C', size: 9, ring: '#0F1B24', label: 'Best guess' });
@@ -349,6 +367,18 @@ export class AlertDetailPage {
     } catch { /* the page still works, the list just stays empty */ }
   }
 
+  nearLoggers = computed(() => {
+    const ls = this.a()?.loggers ?? [];
+    const noisy = ls.filter(l => l.status === 'noisy');
+    const rest = ls.filter(l => l.status !== 'noisy').slice(0, Math.max(0, 3 - noisy.length));
+    return [...noisy.slice(0, 4), ...rest];
+  });
+
+  loggerText(l: { status: string; change_db: number; loud_nights: number }) {
+    const d = `${l.change_db > 0 ? '+' : ''}${l.change_db.toFixed(0)} dB`;
+    return l.status === 'noisy' ? `Leak noise, ${d}, ${l.loud_nights} nights` : l.status === 'loud once' ? `Loud once, ${d}` : 'Quiet';
+  }
+
   async send() {
     this.busy.set(true);
     try {
@@ -368,6 +398,8 @@ export class AlertDetailPage {
     this.busy.set(false);
   }
 }
+
+const LOGGER_COLOR: Record<string, string> = { noisy: '#6D28D9', 'loud once': '#A78BFA', quiet: '#CFC4F3' };
 
 function shade(x: number) {
   const a = [191, 214, 232], b = [11, 61, 110];

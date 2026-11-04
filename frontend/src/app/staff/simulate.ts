@@ -42,6 +42,15 @@ import { LeakMap } from '../shared/leak-map';
               <label class="size"><input type="radio" name="size" [value]="s.key" [(ngModel)]="size"> <b>{{ s.label }}</b> <span class="small muted">{{ s.hint }}</span></label>
             }
           </fieldset>
+          <label class="field">Started
+            <select class="input" [(ngModel)]="nightsAgo" name="nights">
+              <option [ngValue]="0">45 minutes ago</option>
+              <option [ngValue]="1">Before last night</option>
+              <option [ngValue]="2">2 nights ago</option>
+              <option [ngValue]="3">3 nights ago</option>
+            </select>
+            <span class="tiny muted">Noise loggers only record at night, so pick a past start to see them hear the leak.</span>
+          </label>
           <div class="model-box">
             <div class="row between">
               <div><b>AI assist</b>
@@ -72,7 +81,7 @@ import { LeakMap } from '../shared/leak-map';
               <a class="btn" [routerLink]="['/dashboard/alerts', r.id]">Open the alert</a>
             </div>
           }
-          <p class="tiny muted">Large leaks are treated as bursts (started 20 minutes ago). Small and medium ones as slow leaks.</p>
+          <p class="tiny muted">Large leaks behave like a burst main. Small and medium ones are slow leaks that grow over their first day.</p>
         </div>
       </section>
     </div>
@@ -82,6 +91,7 @@ import { LeakMap } from '../shared/leak-map';
     .two { gap: 16px; align-items: stretch; } .map-card { flex: 3 1 560px; } .side { flex: 2 1 300px; }
     .inline { flex-direction: row; align-items: center; gap: 10px; } .inline .input { width: 110px; }
     .pipe { font-size: 18px; padding: 10px 12px; background: var(--ground); border-radius: 8px; }
+    .field .tiny { font-weight: 400; }
     .sizes { border: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
     .size { display: flex; gap: 8px; align-items: center; min-height: 40px; font-size: 15px; cursor: pointer; }
     .res { gap: 8px; }
@@ -98,6 +108,7 @@ export class SimulatePage {
   pipe = signal('');
   street = signal('');
   size = 'large';
+  nightsAgo = 0;
   sizes = [
     { key: 'small', label: 'Small', hint: 'about 1 L/s, slow leak' },
     { key: 'medium', label: 'Medium', hint: 'about 2 L/s, slow leak' },
@@ -154,7 +165,7 @@ export class SimulatePage {
     this.error.set('');
     this.message.set('');
     try {
-      const r = await this.api.demoLeak(this.pipe(), this.size);
+      const r = await this.api.demoLeak(this.pipe(), this.size, this.nightsAgo);
       this.api.systemStatus().then(s => this.sys.set(s)).catch(() => undefined);
       if (r.alert && r.detail) this.result.set(r.detail);
       else this.message.set(r.message ?? 'No alert raised.');

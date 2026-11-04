@@ -19,6 +19,7 @@ import { Logo, ThemeToggle } from '../shared/bits';
           <a routerLink="/dashboard/alerts" routerLinkActive="on"><span>Leak alerts</span>@if (counts().alerts) {<b class="badge orange">{{ counts().alerts }}</b>}</a>
           <a routerLink="/dashboard/repairs" routerLinkActive="on">Repair list</a>
           <a routerLink="/dashboard/meters" routerLinkActive="on"><span>Zones and meters</span>@if (counts().meters) {<b class="badge sand">{{ counts().meters }}</b>}</a>
+          <a routerLink="/dashboard/loggers" routerLinkActive="on"><span>Noise loggers</span>@if (counts().noisy) {<b class="badge orange">{{ counts().noisy }}</b>}</a>
           <a routerLink="/dashboard/reports" routerLinkActive="on"><span>Public reports</span>@if (counts().reports) {<b class="badge blue">{{ counts().reports }}</b>}</a>
           <a routerLink="/dashboard/crews" routerLinkActive="on">Field crews</a>
           <a routerLink="/dashboard/report" routerLinkActive="on">Water loss report</a>
@@ -76,7 +77,7 @@ export class StaffShell {
   auth = inject(Auth);
   private api = inject(Api);
   private router = inject(Router);
-  counts = signal({ alerts: 0, meters: 0, reports: 0 });
+  counts = signal({ alerts: 0, meters: 0, reports: 0, noisy: 0 });
   sys = signal<SystemStatus | null>(null);
 
   constructor() {
@@ -94,6 +95,7 @@ export class StaffShell {
         alerts: o.alerts.length,
         meters: o.meters.noisy + o.meters.offline,
         reports: r.reports.filter(x => x.status !== 'fixed').length,
+        noisy: o.loggers?.noisy ?? 0,
       });
     } catch { /* the page itself shows errors */ }
   }

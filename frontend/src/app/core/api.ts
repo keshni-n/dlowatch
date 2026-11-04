@@ -3,7 +3,7 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
-  AlertDetail, AlertItem, Cluster, Crew, Job, Label, LoginResult, MeterDetail, MetersResponse, ModelMetric,
+  AlertDetail, AlertItem, Cluster, Crew, Job, Label, LoggerDetail, LoggersResponse, LoginResult, MeterDetail, MetersResponse, ModelMetric,
   Evaluation, Overview, PublicAreas, RepairList, WaterReport, SystemStatus, PublicNearby, PublicReportRow, PublicStats, PublicStatus, Replay,
 } from './models';
 
@@ -30,6 +30,8 @@ export class Api {
   dismiss(id: string) { return this.post<AlertItem>(`/alerts/${id}/dismiss`); }
   meters() { return this.get<MetersResponse>('/meters'); }
   meter(id: string, hours = 24) { return this.get<MeterDetail>(`/meters/${id}?hours=${hours}`); }
+  loggers(zone?: string) { return this.get<LoggersResponse>(`/loggers${zone ? '?zone=' + zone : ''}`); }
+  logger(id: string) { return this.get<LoggerDetail>(`/loggers/${id}`); }
   reports() { return this.get<{ reports: PublicReportRow[]; clusters: Cluster[] }>('/reports'); }
   reportToAlert(code: string) { return this.post<{ alert: string }>(`/reports/${code}/alert`); }
   forwardReport(code: string) { return this.post<PublicReportRow>(`/reports/${code}/forward`); }
@@ -37,7 +39,7 @@ export class Api {
   crews() { return this.get<{ crews: Crew[]; jobs: Job[]; labels: Label[] }>('/crews'); }
   mapZones() { return this.get<GeoJSON.FeatureCollection>('/map/zones'); }
   mapPipes(zone: string) { return this.get<GeoJSON.FeatureCollection>(`/map/pipes?zone=${zone}`); }
-  demoLeak(pipe_id: string, size: string) { return this.post<{ alert: string | null; message?: string; model_status: string; detail?: AlertItem }>('/demo/leak', { pipe_id, size }); }
+  demoLeak(pipe_id: string, size: string, nights_ago = 0) { return this.post<{ alert: string | null; message?: string; model_status: string; detail?: AlertItem }>('/demo/leak', { pipe_id, size, nights_ago }); }
   metrics() { return this.get<ModelMetric[]>('/model/metrics'); }
   report(days?: number) { return this.get<WaterReport>(`/report${days ? '?days=' + days : ''}`); }
   evaluation() { return this.get<Evaluation>('/evaluation'); }

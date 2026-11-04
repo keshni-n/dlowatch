@@ -29,6 +29,7 @@ export const routes: Routes = [
       { path: 'repairs', loadComponent: () => import('./staff/repairs').then(m => m.RepairsPage), title: 'Repair priority list' },
       { path: 'replay/:id', loadComponent: () => import('./staff/replay').then(m => m.ReplayPage), title: 'Leak replay' },
       { path: 'meters', loadComponent: () => import('./staff/meters').then(m => m.MetersPage), title: 'Meter data quality' },
+      { path: 'loggers', loadComponent: () => import('./staff/loggers').then(m => m.LoggersPage), title: 'Noise loggers' },
       { path: 'reports', loadComponent: () => import('./staff/reports').then(m => m.ReportsPage), title: 'Public reports' },
       { path: 'crews', loadComponent: () => import('./staff/crews').then(m => m.CrewsPage), title: 'Field crews' },
       { path: 'report', loadComponent: () => import('./staff/report').then(m => m.ReportPage), title: 'Water loss report' },
