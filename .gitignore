@@ -13,6 +13,11 @@ backend/output_north/_api_*
 backend/cache/
 backend/output/
 
+# Angular
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
 # OS / editor
 .DS_Store
 Thumbs.db
@@ -24,3 +29,6 @@ ltown_locator.joblib
 
 # Database (made on first start)
 backend/data/
+
+# Built Angular app copied next to the backend (see README, Build for production)
+backend/web/

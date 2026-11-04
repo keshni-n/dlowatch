@@ -1128,6 +1128,9 @@ def headline(a, s):
         return f"Night flow up {s['flow']['nights_running']} nights in a row"
     if "NF-01" in codes:
         return "Night flow above usual"
+    if a.get("opened_by") and len(a.get("reports", [])) < 3:
+        n = len(a.get("reports", []))
+        return f"Opened from {'a public report' if n == 1 else f'{n} public reports'}"
     if any(c.startswith("PUB") for c in codes):
         return f"{len(a.get('reports', []))} public reports close together"
     return "Small change, keep watching"
@@ -1198,6 +1201,33 @@ REPORT_KINDS = {"water_on_road": ("Dlo lor semin", "Water on the road"),
 CODE_COUNTER = {"n": 4820}
 
 
+class PhotoCheckIn(BaseModel):
+    """What the phone's photo check found. A hint for staff only: never trusted, never changes the score."""
+    ok: bool
+    issues: list[Literal["dark", "blank", "blurry", "not_relevant"]] = Field(default_factory=list, max_length=4)
+    label: Optional[str] = Field(None, max_length=30)
+    confidence: Optional[float] = Field(None, ge=0, le=1)
+    model: Optional[str] = Field(None, max_length=40)
+    brightness: Optional[float] = None
+    sharpness: Optional[float] = None
+    kept_anyway: bool = False
+
+
+PHOTO_ISSUES = {"dark": "too dark", "blank": "nearly blank", "blurry": "blurry", "not_relevant": "may not show water or a pipe"}
+
+
+def photo_hint(r):
+    """One short line for staff and crews about the phone's photo check."""
+    c = r.get("photo_check")
+    if not r.get("photo") or not c:
+        return None
+    if c.get("ok"):
+        found = f", looks like {c['label']} ({c['confidence']:.0%})" if c.get("label") and c.get("confidence") is not None else ""
+        return "Photo check: clear" + found
+    issues = ", ".join(PHOTO_ISSUES.get(i, i) for i in c.get("issues", []))
+    return f"Photo check: {issues}" + (" (sent anyway)" if c.get("kept_anyway") else "")
+
+
 class ReportIn(BaseModel):
     lat: float = Field(ge=-20.6, le=-19.9)
     lon: float = Field(ge=57.2, le=57.9)
@@ -1205,6 +1235,7 @@ class ReportIn(BaseModel):
     note: Optional[str] = Field(None, max_length=300)
     device: str = Field(min_length=6, max_length=64, description="random id the phone keeps, not personal")
     photo: Optional[str] = Field(None, description="data URL of a photo, optional", max_length=3_000_000)
+    photo_check: Optional[PhotoCheckIn] = None
 
 
 def add_report(body: ReportIn, at=None):
@@ -1221,7 +1252,10 @@ def add_report(body: ReportIn, at=None):
 
 
 def link_report(r):
-    """Attach a report to an open alert nearby, or group it with other reports."""
+    """Attach a report to an open alert nearby, or group it with other reports.
+    Reports outside our network are never grouped: an operator forwards them to the right regional team."""
+    if not r["zone"]:
+        return
     best = None
     for a in ALERTS.values():
         if a["status"] != "open" or a["zone"] != r["zone"]:
@@ -1243,14 +1277,14 @@ def link_report(r):
         ALERTS[best[1]]["reports"].append(r["code"])
         return
     # no alert: look for other reports within 150 m in the last 24 h
-    near = [x for x in REPORTS.values() if x["code"] != r["code"] and x["alert"] is None
+    near = [x for x in REPORTS.values() if x["code"] != r["code"] and x["alert"] is None and x["zone"] == r["zone"]
             and km(r["lat"], r["lon"], x["lat"], x["lon"]) <= 0.15 and r["created"] - x["created"] <= 86400]
     group = near + [r]
     if len({x["device"] for x in group}) >= 3:
         aid = uuid.uuid4().hex[:8]
         lat = sum(x["lat"] for x in group) / len(group)
         lon = sum(x["lon"] for x in group) / len(group)
-        ALERTS[aid] = {"id": aid, "zone": r["zone"] or "Z1", "kind": "public", "status": "open",
+        ALERTS[aid] = {"id": aid, "zone": r["zone"], "kind": "public", "status": "open",
                        "started": min(x["created"] for x in group), "created": r["created"],
                        "model": {}, "model_status": "ok", "ruleset": RULESET,
                        "search": {"source": "reports", "best_guess": [lat, lon], "areas": [], "flow_lps": None, "m3_day": None},
@@ -1300,6 +1334,15 @@ def public_report(body: ReportIn):
 
 
 def public_status(r):
+    if not r["zone"]:
+        steps = [
+            {"key": "received", "kreol": "Rapor resevwar", "fr": "Rapport recu", "en": "Received", "done": True,
+             "at": r["created"]},
+            {"key": "forwarded", "kreol": "Avoye ar lekip ou rezion", "fr": "Transmis a l'equipe de votre region",
+             "en": "Sent to the team for your area", "done": bool(r.get("forwarded")), "at": r.get("forwarded")},
+        ]
+        return {"code": r["code"], "created": r["created"], "kind": r["kind"], "area": "Outside the network",
+                "others_nearby": 0, "steps": steps}
     a = ALERTS.get(r["alert"]) if r["alert"] else None
     job = JOBS.get(a["job"]) if a and a.get("job") else None
     fixed = bool(a and a["status"] == "resolved")
@@ -1738,13 +1781,19 @@ def report_view(r):
             "kind_kreol": REPORT_KINDS[r["kind"]][0], "kind_en": REPORT_KINDS[r["kind"]][1],
             "zone": r["zone"], "zone_name": ZONE_NAMES.get(r["zone"], "Outside network") if r["zone"] else "Outside network",
             "note": r["note"], "has_photo": bool(r["photo"]), "alert": r["alert"],
+            "forwarded": r.get("forwarded"), "forwarded_by": r.get("forwarded_by"),
+            "photo_hint": photo_hint(r), "photo_ok": (r.get("photo_check") or {}).get("ok") if r.get("photo_check") else None,
             "status": report_state(r)}
 
 
 def report_state(r):
+    if not r["zone"]:
+        return "forwarded" if r.get("forwarded") else "outside"
     a = ALERTS.get(r["alert"]) if r["alert"] else None
     if not a:
         return "new"
+    if a.get("opened_by") and a["status"] == "open":
+        return "linked"
     if a["status"] == "resolved":
         return "fixed"
     return "linked" if a["kind"] != "public" else "cluster"
@@ -1755,7 +1804,7 @@ def reports_list():
     items = sorted((report_view(r) for r in REPORTS.values()), key=lambda r: -r["created"])
     clusters = []
     for a in ALERTS.values():
-        if not a.get("reports") or a["status"] != "open":
+        if not a.get("reports") or a["status"] != "open" or (a.get("opened_by") and len(a["reports"]) < 3):
             continue
         rs = [REPORTS[c] for c in a["reports"] if c in REPORTS]
         clusters.append({"alert": a["id"], "kind": a["kind"], "zone": a["zone"], "zone_name": ZONE_NAMES.get(a["zone"]),
@@ -1772,6 +1821,53 @@ def report_photo(code: str):
     if not r or not r["photo"]:
         raise HTTPException(404, "No photo")
     return {"photo": r["photo"]}
+
+
+@router.post("/reports/{code}/alert")
+def report_to_alert(code: str, user=Depends(OPS_ONLY)):
+    """Operator opens an alert from a single report (a clear photo of a broken pipe, say), so a crew can be sent.
+    Other reports on their own within 150 m in the last 24 h join it. Public reports alone still score Watch at most."""
+    with LOCK, store.transaction():
+        r = REPORTS.get(code)
+        if not r:
+            raise HTTPException(404, "No report with this code")
+        if not r["zone"]:
+            raise HTTPException(400, "This report is outside our network. Forward it to the team for that area.")
+        if r["alert"] and ALERTS.get(r["alert"], {}).get("status") == "open":
+            return {"alert": r["alert"]}
+        group = [x for x in REPORTS.values() if x["zone"] == r["zone"] and (x["code"] == code or (
+                 (x["alert"] is None or ALERTS.get(x["alert"], {}).get("status") != "open")
+                 and km(r["lat"], r["lon"], x["lat"], x["lon"]) <= 0.15 and abs(r["created"] - x["created"]) <= 86400))]
+        aid = uuid.uuid4().hex[:8]
+        lat = sum(x["lat"] for x in group) / len(group)
+        lon = sum(x["lon"] for x in group) / len(group)
+        ALERTS[aid] = {"id": aid, "zone": r["zone"], "kind": "public", "status": "open",
+                       "started": min(x["created"] for x in group), "created": int(time.time()),
+                       "model": {}, "model_status": "ok", "ruleset": RULESET,
+                       "search": {"source": "reports", "best_guess": [lat, lon], "areas": [], "flow_lps": None, "m3_day": None},
+                       "dp_mm": {}, "latlon": [lat, lon], "streets": streets_of(pipes_near(r["zone"], lat, lon, 150)),
+                       "reports": [x["code"] for x in group], "job": None, "events": [], "opened_by": user["name"]}
+        store.save_alert(ALERTS[aid])
+        for x in group:
+            x["alert"] = aid
+            store.save_report(x)
+        log.warning("Alert %s opened from report %s by %s", aid, code, user["name"])
+        return {"alert": aid}
+
+
+@router.post("/reports/{code}/forward")
+def forward_report(code: str, user=Depends(OPS_ONLY)):
+    """Report outside our network: mark it as passed on to the regional team. The reporter sees this on their status."""
+    with LOCK:
+        r = REPORTS.get(code)
+        if not r:
+            raise HTTPException(404, "No report with this code")
+        if r["zone"]:
+            raise HTTPException(400, "This report is inside our network. Open an alert from it instead.")
+        if not r.get("forwarded"):
+            r["forwarded"], r["forwarded_by"] = int(time.time()), user["name"]
+            store.save_report(r)
+        return report_view(r)
 
 
 @router.get("/crews", dependencies=[Depends(STAFF_ONLY)])
@@ -1811,7 +1907,20 @@ def job_view(j):
         "search_radius_m": round(top["radius_m"]) if top else None,
         "suspects": suspects(a),
         "pipes": top["pipes"] if top else [],
+        "reports": job_reports(a),
     }
+
+
+def job_reports(a):
+    """Public reports linked to the job's alert, newest first. Photos are fetched one by one (they are big)."""
+    out = []
+    for c in a.get("reports", []):
+        r = REPORTS.get(c)
+        if r:
+            out.append({"code": r["code"], "created": r["created"], "kind_en": REPORT_KINDS[r["kind"]][1],
+                        "kind_kreol": REPORT_KINDS[r["kind"]][0], "note": r["note"], "latlon": [r["lat"], r["lon"]],
+                        "has_photo": bool(r["photo"]), "photo_hint": photo_hint(r)})
+    return sorted(out, key=lambda x: -x["created"])
 
 
 # ============================================================== crew endpoints
@@ -1840,6 +1949,17 @@ def crew_job_pipes(jid: str, user=Depends(CREW_ONLY)):
     ids = set(v["pipes"])
     return {"type": "FeatureCollection",
             "features": [f for f in api.GEO["pipes"]["features"] if f["properties"]["id"] in ids]}
+
+
+@router.get("/crew/jobs/{jid}/reports/{code}/photo")
+def crew_report_photo(jid: str, code: str, user=Depends(CREW_ONLY)):
+    """Photo from a public report, only for a report linked to this crew's own job."""
+    j = own_job(jid, user)
+    a = ALERTS.get(j["alert"]) or {}
+    r = REPORTS.get(code)
+    if not r or code not in a.get("reports", []) or not r["photo"]:
+        raise HTTPException(404, "No photo")
+    return {"photo": r["photo"]}
 
 
 class StatusIn(BaseModel):
