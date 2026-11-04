@@ -79,6 +79,48 @@ Optional settings (environment variables for the backend). If not set, the line 
 | `DLOWATCH_HOTLINE` | Emergency phone number on Home and Learn |
 | `DLOWATCH_UTILITY_NAME` | Name of the water utility |
 
+## Accounts
+
+| Who | Login |
+|---|---|
+| Operator | operator@dlowatch.mu / demo123 |
+| Admin (also has the System test page) | admin@dlowatch.mu / admin123 |
+| Network manager (view only) | manager@dlowatch.mu / manager123 |
+| Crew 1 | CW-0108 / PIN 1111 |
+| Crew 2 | CW-0217 / PIN 1234 |
+| Maintenance | CW-0350 / PIN 3333 |
+
+These are created in the database (hashed) from `backend/config/people.json` on the first start. Set `DLOWATCH_SECRET` for a real deployment.
+
+## How it runs (live, with a database)
+
+There is no prepared story. DloWatch runs like a deployed system:
+
+- **Database:** `backend/data/dlowatch.db` (SQLite, made on the first start). Alerts, public reports, crew jobs, crew findings, accounts and the network's leaks are saved there and survive restarts. Passwords and PINs are stored hashed.
+- **Start fresh:** admin, **System test**, **Reset** (deletes alerts, reports, jobs and network leaks; accounts stay). Same from the command line: `python store.py reset`. `python store.py info` shows what is stored. Deleting the `data` folder starts from zero, accounts included.
+- **Accounts:** created in the database from `config/people.json` on the very first start. Changing the file later does not change existing accounts.
+- **The network:** the meters read a simulated network (there are no live CWA meters to connect yet). Leaks start in it **on their own, at random** (about 4 a day across the 8 zones, a third of them bursts). If the server was off, the leaks of that time are added when it starts again (up to 2 days).
+- **The detector:** every 5 minutes it checks each zone's meters and scores them with the rules. It is never told about the leaks: it only sees the readings. It raises an alert when the score reaches Watch and there is a direct leak sign (night flow, a flow jump or a pressure drop).
+  - Bursts: found within minutes (sudden flow jump plus a pressure drop at more than one sensor).
+  - Slow leaks: found after the night readings show them, usually the next morning (night flow must stay high 2 nights to count fully).
+- **Fixing:** when a crew logs "Leak found", the leak stops in the network and the zone's night flow goes back to normal. "No leak" or "Not a leak" pauses new alerts in that zone for 6 hours.
+- **Settings:** `backend/config/network.json` (leaks per day, size mix, scan interval, cooldown, burst thresholds).
+- **Meter faults:** a few meters have lasting problems (spikes, gaps, stuck, offline, drifting, counter reset, duplicate times), so the data-cleaning step always has work to do.
+
+Tested over 6 virtual days with leaks starting at random: bursts alerted in a median of about 20 minutes, 25 of 31 leaks found, 1 false alarm (Watch level).
+
+**For a live demo:** press **Reset** a few minutes before you start, so the screens are clean. Then, as admin, use **System test** to start a leak on the spot: a large leak (burst) is found within a minute.
+
+### Good live demo flow
+
+1. Staff: sign in as operator, show the overview and any alerts the network has raised by itself.
+2. Open **Zones and meters** and show the raw vs cleaned chart (noisy data question answered).
+3. In a second window signed in as **admin**, open **System test**, click a pipe, choose Large, start the test leak. The detector finds it from the meters and the alert appears on the operator's screen.
+4. Walk through "How this score was worked out", then **Send crew** to Crew 1.
+5. On a phone (or a small browser window): `/crew`, sign in as CW-0108, open the job, Leak found, Close the job.
+6. Back on the dashboard: alert closed, result saved under **Field crews**. Restart the server: everything is still there.
+7. Public: `/` on a phone, report a leak with a photo, get a code, track it.
+
 ## How the score works
 
 The rules decide, the model only helps. Same idea as FraudLens ("the AI reads, the rules decide").
@@ -111,6 +153,35 @@ The rules decide, the model only helps. Same idea as FraudLens ("the AI reads, t
 
 Bands: 20+ Watch, 45+ High, 70+ Critical. A burst (PR-02 with a flow signal) is always at least Critical.
 Public reports alone are capped at Watch. Meters under 80% trust count for half, under 50% not at all.
+
+## Repair-priority list and pipe suspects
+
+**Repair list** (staff menu): open leaks ranked by what fixing them is worth.
+
+- **Water saved if fixed** (m³/day and litres per hour), **households** in the search area,
+  and **how easy** the repair is (pipe size, busy road, how much pipe to walk).
+- Default weights: 70% water, 15% households, 15% ease. Sort by any one of them on the page.
+- Settings in `backend/config/priority.json` (weights, household water use, block size).
+  If the file is missing or broken, built-in defaults are used and a warning is logged.
+
+**Where to check first** (alert page and crew phone): the search area is cut into blocks of about 300 m,
+named after their main street. Each pipe is rated by how likely its area is and how close it is to the best guess,
+so the blocks get a share that adds up to 100%. The crew can switch between "Most likely" and "Closest first".
+
+Tested on 64 simulated leaks (8 per zone): the leak was in the **first block 27%** of the time,
+in the **top 3 blocks 47%**, and in the **top 5 blocks 67%**.
+
+## Water loss report (for the network manager)
+
+Staff menu, **Water loss report** (`/dashboard/report`, API `GET /api/report?days=7`). The manager account lands here.
+
+- Water put in, expected use, water lost, water saved by repairs, and how much the open leaks still lose each day.
+- Water lost each day (chart), zones sorted by water lost, repairs done.
+- **Download CSV** (opens in Excel) and **Print or save as PDF**.
+- **Money** stays hidden until you set `water_cost_rs_per_m3` in `backend/config/report.json`. It is empty on purpose: put in the real CWA cost, not a guess.
+- Lost = water put in minus the zone's normal demand pattern. Zones that used less than expected count as 0.
+
+The manager can see every page but cannot send crews or close alerts (the server returns 403). Only the admin sees the System test page.
 
 ## Persistence rule (ruleset wl-1.2)
 
@@ -171,6 +242,19 @@ The town is only about 2.7 km by 1.4 km, so this is still rough: say so in the p
 
 Limits, say these in the pitch: everything is simulated on an illustrative network; the model was trained on the same network; the meter faults tested are the kinds the cleaning step was built for; one leak at a time. Expect more false alarms and a bigger distance on real CWA data. The BattLeDIM test above shows what happens with realistic demand.
 
+## Public report safety
+
+Settings in `backend/config/public.json`.
+
+- Phone numbers and email addresses typed in the note are replaced with `[removed]` before saving. The person is told why.
+- One phone (a random id it keeps, no personal data) can send 5 reports an hour and 15 a day. After that it is asked to call the hotline.
+- The same photo cannot be sent again within 24 hours.
+- Public reports alone can never go above Watch, and reports from one phone count as one person.
+
+## "If not fixed"
+
+Each open alert shows how much water it will lose if left for a week, a month and a year (and the money, once `water_cost_rs_per_m3` is set in `config/report.json`). It makes the urgency clear in one line.
+
 ## How the demo data was made
 
 Nothing here is real CWA data. This is how each part was made, so you can explain it:
@@ -189,6 +273,27 @@ Nothing here is real CWA data. This is how each part was made, so you can explai
 
 The BattLeDIM L-Town test is different: that network, its demand and its leak list are a published benchmark, not ours.
 
+## Impact and ethics
+
+**Why it matters.** Mauritius loses a large share of its treated water before it reaches a tap. Finding leaks earlier saves water during dry seasons, and saves the energy and chemicals used to treat water that is then lost.
+
+**What the system decides and what people decide.** The rules decide the score, and every point is shown with its reason. The AI can add at most 20 points and only when the meters agree. A person always decides whether to send a crew, and crews confirm what they found. Nothing is dug up because of the AI alone.
+
+**Fairness.** The repair list ranks by water lost first (70%), then households affected and ease of repair. Areas with fewer sensors get bigger search areas, not lower priority. Public reports help everywhere, so areas with few sensors can still be heard.
+
+**Privacy.**
+- Public reports need no account, name or phone number. A phone is a random id it keeps on the device.
+- Phone numbers and emails typed in notes are removed before saving.
+- The public side shows leak notices (a zone, a street, or the middle of a group of reports), never a single report's location or who sent it. A report's status can only be seen with its code.
+- Staff and crew accounts are separate, and the manager account can only view.
+
+**Honesty.** The app says on screen that the network and readings are simulated. The evaluation lists its limits, and the BattLeDIM test shows where the system is weak (finding the exact place).
+
+**Risks we know about.**
+- A false alarm can send a crew for nothing. That is why public reports alone stay at Watch, and why an alert needs night flow to stay high 2 nights.
+- People could spam reports. Hence the per-phone limits, the photo check, and "one phone = one person".
+- The model was trained on simulated data. Real CWA data would need retraining, and crew results are kept as labels for that.
+
 ## Noisy meter readings (DQ-01 to DQ-06)
 
 Every reading is cleaned before any rule runs (`clean()` in `dlowatch.py`):
@@ -203,3 +308,29 @@ Every reading is cleaned before any rule runs (`clean()` in `dlowatch.py`):
 | DQ-06 | Duplicate or out of order timestamps | Removed and sorted |
 
 Each meter gets a trust score (0 to 100%) that the rules use.
+
+## Build for production (one server)
+
+```bash
+cd frontend
+npm run build
+```
+
+Copy `frontend/dist/frontend/browser` to `backend/web`, then start only the backend:
+
+```bash
+cd backend
+py -3.13 -m uvicorn server:app --host 0.0.0.0 --port 8000
+```
+
+Everything runs from `http://<this PC>:8000`: the app at `/`, the API at `/api`. Phones on the same Wi-Fi can open it too. The offline support (service worker) only runs in this production build.
+
+Security notes:
+- Login tokens are signed with `DLOWATCH_SECRET` if set, otherwise with a random key made on the first start and kept in the database.
+- The original test routes from `api.py` (`/predict`, `/simulate-leak`, `/repairs`, the old test dashboard) have no login, so they are switched off. `DLOWATCH_LEGACY_ROUTES=on` brings them back for local testing.
+- Change the account passwords in `config/people.json` before the very first start of a real deployment.
+
+## Be honest in the pitch
+
+The network is built from real OpenStreetMap streets, but pipe sizes, demand, reservoirs and elevations are assumed,
+and the meter readings are simulated. It is not real CWA data. The screens are kept clean like a deployed system, so say this yourself in the pitch. Accounts and test results are only in this README, not on screen.
