@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Water Loss Detection</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --bg: #0f1b2b; --panel: #15253a; --line: #24384f; --text: #e6eef7; --muted: #8ea3ba;
+    --blue: #3b9eff; --orange: #ff8a3d; --red: #ff4d4f; --green: #2ecc71;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.4 "Segoe UI", system-ui, sans-serif; background: var(--bg); color: var(--text);
+         display: grid; grid-template-columns: 360px 1fr; height: 100vh; overflow: hidden; }
+  aside { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  header { padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
+  header h1 { margin: 0; font-size: 18px; }
+  header p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+  .scroll { overflow-y: auto; flex: 1; }
+  section { padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  h2 { margin: 0 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .zones { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .zones button { padding: 7px 0; border-radius: 6px; border: 1px solid var(--line); background: #1b2e46;
+                  color: var(--text); cursor: pointer; font-weight: 600; }
+  .zones button.active { outline: 2px solid var(--blue); }
+  .zones button .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+  .muted { color: var(--muted); }
+  .row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+  select, .btn { padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line); background: #1b2e46; color: var(--text); font: inherit; }
+  .btn { cursor: pointer; font-weight: 600; }
+  .btn.primary { background: var(--orange); border-color: var(--orange); color: #1a1006; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .card { background: #1b2e46; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-top: 8px; }
+  .kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kpi b { display: block; font-size: 20px; }
+  .kpi span { color: var(--muted); font-size: 12px; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+  .tag.hit { background: #1e4d33; color: var(--green); }
+  .tag.miss { background: #4d1e1e; color: var(--red); }
+  .area { display: flex; justify-content: space-between; padding: 6px 0; border-top: 1px solid var(--line); cursor: pointer; }
+  .area:first-child { border-top: 0; }
+  .alert { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); }
+  .alert:first-child { border-top: 0; }
+  .alert .info { cursor: pointer; }
+  .alert small { color: var(--muted); }
+  .alert button { padding: 4px 8px; font-size: 12px; }
+  #map { height: 100vh; }
+  .legend { background: rgba(21,37,58,.92); color: var(--text); padding: 8px 10px; border-radius: 6px; font-size: 12px; line-height: 1.7; }
+  .legend i { display: inline-block; width: 14px; height: 4px; margin-right: 6px; vertical-align: middle; }
+  .legend .ring { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--red); background: #fff; }
+  .spinner { display: none; color: var(--orange); font-weight: 600; }
+  .busy .spinner { display: inline; }
+  footer { padding: 8px 18px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<aside>
+  <header>
+    <h1>💧 Water Loss Detection</h1>
+    <p id="netinfo">Connecting to API ...</p>
+  </header>
+  <div class="scroll">
+    <section id="zoneSection">
+      <h2>1. Pick a zone</h2>
+      <div class="zones" id="zones"></div>
+      <p class="muted" id="zoneInfo" style="margin:8px 0 0">Click a zone here or on the map.</p>
+    </section>
+
+    <section>
+      <h2>2. Simulate a leak</h2>
+      <div id="pipeInfo" class="muted">Click a pipe on the map, or use a random one.</div>
+      <div class="row">
+        <select id="size">
+          <option value="small">Small leak</option>
+          <option value="medium" selected>Medium leak</option>
+          <option value="large">Large leak</option>
+        </select>
+        <button class="btn" id="randomBtn" disabled>🎲 Random pipe</button>
+      </div>
+      <div class="row">
+        <button class="btn primary" id="simBtn" disabled>Simulate leak</button>
+        <span class="spinner">Running EPANET ...</span>
+      </div>
+    </section>
+
+    <section id="resultSection" style="display:none">
+      <h2>3. What the AI found</h2>
+      <div id="result"></div>
+    </section>
+
+    <section>
+      <h2>Repair list <span class="muted" id="alertCount"></span></h2>
+      <div id="alerts" class="muted">No open alerts yet.</div>
+    </section>
+  </div>
+  <footer>Illustrative network on real OpenStreetMap streets. Not real CWA pipes.</footer>
+</aside>
+
+<div id="map"></div>
+
+<script>
+const API = location.origin.startsWith("http") ? location.origin : "http://127.0.0.1:8000";
+const AREA_COLOURS = ["#ff8a3d", "#ffc53d", "#ffe58f"];
+
+const map = L.map("map", { preferCanvas: true }).setView([-20.07, 57.62], 11);
+const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  { maxZoom: 19, attribution: "© OpenStreetMap contributors" }).addTo(map);
+const esri = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+  { maxZoom: 19, attribution: "Tiles © Esri" });
+L.control.layers({ "OpenStreetMap": osm, "Esri street map": esri }).addTo(map);
+
+const legend = L.control({ position: "bottomright" });
+legend.onAdd = () => {
+  const d = L.DomUtil.create("div", "legend");
+  d.innerHTML = `<i style="background:#3b9eff"></i>Pipe (thicker = bigger)<br>
+    <i class="ring"></i>Pressure sensor<br>
+    <i style="background:#ff8a3d;height:10px;border-radius:50%;width:10px"></i>AI suspect areas<br>
+    <span style="color:#ff4d4f">✖</span> AI best guess &nbsp; 💧 Real leak`;
+  return d;
+};
+legend.addTo(map);
+
+let zonesLayer, pipesLayer, sensorsLayer, resultLayer = L.layerGroup().addTo(map);
+let zoneColours = {}, currentZone = null, selectedPipe = null, pipeIndex = {};
+
+const $ = id => document.getElementById(id);
+async function api(path, opts) {
+  const r = await fetch(API + path, opts);
+  if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+  return r.json();
+}
+
+// ------------------------------------------------------------ zones
+async function init() {
+  const h = await api("/health");
+  $("netinfo").textContent = `${h.network} · ${h.zones.length} zone(s) · ready`;
+  const zones = await api("/zones");
+  if (zones.features.length === 0) {           // Port Louis network: one zone, no outlines
+    $("zoneSection").style.display = "none";
+    zoneColours[h.zones[0]] = "#3b9eff";
+    return openZone(h.zones[0]);
+  }
+  zonesLayer = L.geoJSON(zones, {
+    style: f => ({ color: f.properties.colour, weight: 2, fillColor: f.properties.colour, fillOpacity: .15 }),
+    onEachFeature: (f, layer) => {
+      zoneColours[f.properties.zone] = f.properties.colour;
+      layer.bindTooltip(`<b>Zone ${f.properties.zone}</b><br>${f.properties.junctions} junctions · ${f.properties.pipe_km} km of pipe`);
+      layer.on("click", () => openZone(f.properties.zone));
+    }
+  }).addTo(map);
+  map.fitBounds(zonesLayer.getBounds());
+  $("zones").innerHTML = zones.features.map(f =>
+    `<button data-z="${f.properties.zone}"><span class="dot" style="background:${f.properties.colour}"></span>${f.properties.zone}</button>`).join("");
+  document.querySelectorAll(".zones button").forEach(b => b.onclick = () => openZone(b.dataset.z));
+}
+
+async function openZone(zone) {
+  currentZone = zone;
+  selectedPipe = null;
+  resultLayer.clearLayers();
+  $("resultSection").style.display = "none";
+  document.querySelectorAll(".zones button").forEach(b => b.classList.toggle("active", b.dataset.z === zone));
+  $("zoneInfo").textContent = `Loading zone ${zone} ...`;
+  const [pipes, nodes] = await Promise.all([api(`/pipes?zone=${zone}`), api(`/nodes?zone=${zone}`)]);
+  if (pipesLayer) map.removeLayer(pipesLayer);
+  if (sensorsLayer) map.removeLayer(sensorsLayer);
+  if (zonesLayer) zonesLayer.setStyle(f => ({ fillOpacity: f.properties.zone === zone ? 0 : .15, weight: f.properties.zone === zone ? 3 : 1 }));
+
+  pipeIndex = {};
+  const colour = zoneColours[zone] || "#3b9eff";
+  pipesLayer = L.geoJSON(pipes, {
+    filter: f => f.properties.status !== "closed valve",
+    style: f => baseStyle(f, colour),
+    onEachFeature: (f, layer) => {
+      pipeIndex[f.properties.id] = layer;
+      layer.on("click", () => selectPipe(f.properties.id));
+      layer.bindTooltip(`${f.properties.id} · ${f.properties.street || "unnamed street"} · ${f.properties.diameter_mm} mm`, { sticky: true });
+    }
+  }).addTo(map);
+
+  sensorsLayer = L.layerGroup().addTo(map);
+  let nSensors = 0;
+  nodes.features.forEach(f => {
+    const p = f.properties, [lon, lat] = f.geometry.coordinates;
+    if (p.kind && p.kind.startsWith("reservoir")) {
+      L.marker([lat, lon], { title: "Reservoir" }).bindTooltip(`Reservoir ${p.zone || ""} (assumed)`).addTo(sensorsLayer);
+    } else if (p.is_sensor) {
+      nSensors++;
+      L.circleMarker([lat, lon], { radius: 6, color: "#ff4d4f", weight: 3, fillColor: "#fff", fillOpacity: 1 })
+        .bindTooltip(`Sensor ${p.id}`).addTo(sensorsLayer);
+    }
+  });
+  map.fitBounds(pipesLayer.getBounds(), { padding: [20, 20] });
+  $("zoneInfo").textContent = `Zone ${zone}: ${Object.keys(pipeIndex).length} pipes, ${nSensors} sensors.`;
+  $("pipeInfo").textContent = "Click a pipe on the map, or use a random one.";
+  $("randomBtn").disabled = false;
+  $("simBtn").disabled = true;
+}
+
+function baseStyle(f, colour) {
+  if (f.properties.road_type === "inlet") return { color: "#08306b", weight: 6 };
+  return { color: colour, weight: 1 + f.properties.diameter_mm / 120, opacity: .85 };
+}
+
+function resetPipeStyles() {
+  const colour = zoneColours[currentZone] || "#3b9eff";
+  pipesLayer.eachLayer(l => l.setStyle(baseStyle(l.feature, colour)));
+}
+
+function selectPipe(id) {
+  resetPipeStyles();
+  selectedPipe = id;
+  const layer = pipeIndex[id], p = layer.feature.properties;
+  layer.setStyle({ color: "#ffffff", weight: 7 });
+  layer.bringToFront();
+  $("pipeInfo").innerHTML = `<b>${id}</b> · ${p.street || "unnamed street"}<br><span class="muted">${p.diameter_mm} mm · ${Math.round(p.length_m)} m long</span>`;
+  $("simBtn").disabled = false;
+}
+
+$("randomBtn").onclick = () => {
+  const ids = Object.keys(pipeIndex).filter(id => !id.startsWith("P_IN"));
+  const id = ids[Math.floor(Math.random() * ids.length)];
+  selectPipe(id);
+  map.panTo(pipeIndex[id].getBounds().getCenter());
+};
+
+// ------------------------------------------------------------ simulate
+$("simBtn").onclick = async () => {
+  if (!selectedPipe) return;
+  document.body.classList.add("busy");
+  $("simBtn").disabled = true;
+  try {
+    const r = await api("/simulate-leak", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pipe_id: selectedPipe, size: $("size").value })
+    });
+    showResult(r);
+    loadAlerts();
+  } catch (e) {
+    alertBox(`Simulation failed: ${e.message}`);
+  } finally {
+    document.body.classList.remove("busy");
+    $("simBtn").disabled = false;
+  }
+};
+
+function showResult(r) {
+  resultLayer.clearLayers();
+  resetPipeStyles();
+  const t = r.truth, p = r.prediction, c = r.check;
+  $("resultSection").style.display = "block";
+
+  if (!p.leak) {
+    $("result").innerHTML = `<div class="card">The AI did <b>not</b> detect this leak (probability ${(p.leak_probability * 100).toFixed(0)}%). Real leak: ${t.leak_flow_lps} L/s.</div>`;
+  } else {
+    // suspect areas: biggest probability drawn last (on top)
+    p.top_areas.slice().reverse().forEach((a, iRev) => {
+      const i = p.top_areas.length - 1 - iRev;
+      L.circle(a.centre_latlon, { radius: Math.min(Math.max(a.radius_m, 80), 600), color: AREA_COLOURS[i], weight: 2,
+        fillColor: AREA_COLOURS[i], fillOpacity: .18, dashArray: i ? "6 6" : null })
+        .bindTooltip(`Suspect area #${i + 1} (${(a.probability * 100).toFixed(0)}%)`).addTo(resultLayer);
+      a.pipes_to_check.forEach(id => pipeIndex[id] && pipeIndex[id].setStyle({ color: AREA_COLOURS[i], weight: 4 }));
+    });
+    L.marker(p.best_guess_latlon, { icon: L.divIcon({ className: "", html: '<div style="color:#ff4d4f;font-size:22px;font-weight:900;text-shadow:0 0 3px #000">✖</div>', iconSize: [22, 22], iconAnchor: [11, 13] }) })
+      .bindTooltip("AI best guess").addTo(resultLayer);
+
+    const hit = c.pipe_in_top3_areas;
+    $("result").innerHTML = `
+      <div class="kpis">
+        <div class="card kpi"><b>${(p.leak_probability * 100).toFixed(0)}%</b><span>leak probability</span></div>
+        <div class="card kpi"><b>${p.water_lost_m3_per_day}</b><span>m³ lost per day (AI)</span></div>
+        <div class="card kpi"><b>${p.leak_flow_lps} L/s</b><span>AI estimate · real ${t.leak_flow_lps}</span></div>
+        <div class="card kpi"><b>${c.distance_error_m} m</b><span>from the real leak</span></div>
+      </div>
+      <div class="card">
+        <span class="tag ${hit ? "hit" : "miss"}">${hit ? "✔ Leak is in the top 3 areas" : "✖ Leak not in the top 3 areas"}</span>
+        <div style="margin-top:8px">${p.top_areas.map((a, i) => `
+          <div class="area" data-i="${i}"><span><span style="color:${AREA_COLOURS[i]}">●</span> Area #${i + 1} (${a.area})</span>
+          <span class="muted">${(a.probability * 100).toFixed(0)}% · ${a.pipes_to_check.length} pipes</span></div>`).join("")}</div>
+      </div>
+      <p class="muted" style="font-size:12px">Took ${r.seconds} s (EPANET + AI).</p>`;
+    document.querySelectorAll(".area").forEach(el => el.onclick = () =>
+      map.flyTo(p.top_areas[el.dataset.i].centre_latlon, 16));
+  }
+
+  // real leak drawn last so it stays visible
+  L.marker(t.latlon, { icon: L.divIcon({ className: "", html: '<div style="font-size:24px;filter:drop-shadow(0 0 2px #000)">💧</div>', iconSize: [24, 24], iconAnchor: [12, 20] }) })
+    .bindTooltip(`Real leak on ${t.pipe_id}: ${t.leak_flow_lps} L/s`).addTo(resultLayer);
+  if (pipeIndex[t.pipe_id]) pipeIndex[t.pipe_id].setStyle({ color: "#ff4d4f", weight: 7 });
+  const pts = [t.latlon].concat(p.leak ? [p.best_guess_latlon, ...p.top_areas.map(a => a.centre_latlon)] : []);
+  map.fitBounds(L.latLngBounds(pts).pad(0.6));
+}
+
+function alertBox(msg) {
+  $("resultSection").style.display = "block";
+  $("result").innerHTML = `<div class="card" style="border-color:var(--red)">${msg}</div>`;
+}
+
+// ------------------------------------------------------------ repairs
+async function loadAlerts() {
+  const items = await api("/repairs");
+  $("alertCount").textContent = items.length ? `(${items.length})` : "";
+  if (!items.length) { $("alerts").innerHTML = "No open alerts yet."; return; }
+  $("alerts").innerHTML = items.map((a, i) => `
+    <div class="alert">
+      <div class="info" data-id="${a.id}"><b>#${i + 1} · Zone ${a.zone}</b> · ${a.water_lost_m3_per_day} m³/day<br>
+        <small>${a.created} · check area ${a.top_areas[0].area} first</small></div>
+      <button class="btn" data-resolve="${a.id}">Repaired</button>
+    </div>`).join("");
+  document.querySelectorAll(".alert .info").forEach(el => el.onclick = async () => {
+    const a = items.find(x => x.id === el.dataset.id);
+    if (a.zone !== currentZone) await openZone(a.zone);
+    map.flyTo(a.top_areas[0].centre_latlon, 15);
+  });
+  document.querySelectorAll("[data-resolve]").forEach(b => b.onclick = async () => {
+    await api(`/repairs/${b.dataset.resolve}/resolve`, { method: "POST" });
+    loadAlerts();
+  });
+}
+
+init().then(loadAlerts).catch(e => {
+  $("netinfo").textContent = "Cannot reach the API. Is uvicorn running?";
+  console.error(e);
+});
+</script>
+</body>
+</html>

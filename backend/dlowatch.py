@@ -1814,3 +1814,142 @@ def job_view(j):
     }
 
 
+# ============================================================== crew endpoints
+@router.get("/crew/jobs")
+def crew_jobs(user=Depends(CREW_ONLY)):
+    mine = [job_view(j) for j in JOBS.values() if j["crew_id"] == user["crew_id"] and j["status"] != "cancelled"]
+    return sorted(mine, key=lambda j: (j["status"] == "done", -j["score"]))
+
+
+def own_job(jid, user):
+    j = JOBS.get(jid)
+    if not j or j["crew_id"] != user["crew_id"]:
+        raise HTTPException(404, "This job is not for your crew")
+    return j
+
+
+@router.get("/crew/jobs/{jid}")
+def crew_job(jid: str, user=Depends(CREW_ONLY)):
+    return job_view(own_job(jid, user))
+
+
+@router.get("/crew/jobs/{jid}/pipes")
+def crew_job_pipes(jid: str, user=Depends(CREW_ONLY)):
+    j = own_job(jid, user)
+    v = job_view(j)
+    ids = set(v["pipes"])
+    return {"type": "FeatureCollection",
+            "features": [f for f in api.GEO["pipes"]["features"] if f["properties"]["id"] in ids]}
+
+
+class StatusIn(BaseModel):
+    status: Literal["on_the_way", "on_site"]
+
+
+@router.post("/crew/jobs/{jid}/status")
+def crew_status(jid: str, body: StatusIn, user=Depends(CREW_ONLY)):
+    j = own_job(jid, user)
+    if j["status"] == "done":
+        raise HTTPException(400, "This job is already closed")
+    j["status"] = body.status
+    return job_view(j)
+
+
+class ResultIn(BaseModel):
+    outcome: Literal["leak_found", "no_leak", "meter_fault", "planned_works"]
+    cause: Optional[str] = Field(None, max_length=60)
+    found_at: Optional[str] = None
+    fixed_at: Optional[str] = None
+    notes: Optional[str] = Field(None, max_length=500)
+    photo_before: Optional[str] = Field(None, max_length=3_000_000)
+    photo_after: Optional[str] = Field(None, max_length=3_000_000)
+
+
+@router.post("/crew/jobs/{jid}/result")
+def crew_result(jid: str, body: ResultIn, user=Depends(CREW_ONLY)):
+    with LOCK:
+        j = own_job(jid, user)
+        if j["status"] == "done":
+            raise HTTPException(400, "This job is already closed")
+        now = int(time.time())
+        j.update(status="done", finished=now, outcome=body.outcome, cause=body.cause, notes=body.notes,
+                 found_at=body.found_at, fixed_at=body.fixed_at,
+                 photos=sum(1 for p in (body.photo_before, body.photo_after) if p))
+        a = ALERTS[j["alert"]]
+        a["status"] = "resolved"
+        a["resolved"] = now
+        fixed = None
+        if body.outcome == "leak_found":
+            if a.get("leak_id") in LEAKS:
+                fixed = LEAKS[a["leak_id"]]
+                fixed["end"] = now
+                VERSION["n"] += 1
+            else:
+                fixed = end_leak_near(a, now)
+        if a["id"] in api.ALERTS:
+            api.ALERTS[a["id"]]["status"] = "resolved"
+        LABELS.append({"id": f"L-{len(LABELS) + 1}", "alert": a["id"], "zone": a["zone"], "label": body.outcome,
+                       "cause": body.cause, "by": CREWS[j["crew_id"]]["name"], "at": now,
+                       "pipe": fixed["pipe_id"] if fixed else None})
+        return job_view(j)
+
+
+
+# ============================================================== map data
+@router.get("/map/zones", dependencies=[Depends(STAFF_ONLY)])
+def map_zones():
+    feats = []
+    ov = {z["zone"]: z for z in overview()["zones"]}
+    for f in api.GEO["zones"]["features"]:
+        z = f["properties"]["zone"]
+        feats.append({"type": "Feature", "geometry": f["geometry"],
+                      "properties": {"zone": z, "name": ZONE_NAMES[z], "level": ov[z]["level"],
+                                     "score": ov[z]["score"], "pipe_km": f["properties"]["pipe_km"]}})
+    return {"type": "FeatureCollection", "features": feats}
+
+
+PIPES_BY_ZONE = {}
+
+
+@router.get("/map/pipes", dependencies=[Depends(STAFF_ONLY)])
+def map_pipes(zone: str):
+    if zone not in api.ZONES:
+        raise HTTPException(404, "Unknown zone")
+    if zone not in PIPES_BY_ZONE:
+        feats = []
+        for f in api.GEO["pipes"]["features"]:
+            p = f["properties"]
+            if p.get("zone") == zone and p.get("status", "open") == "open":
+                coords = [[round(x, 5), round(y, 5)] for x, y in f["geometry"]["coordinates"]]
+                feats.append({"type": "Feature", "geometry": {"type": "LineString", "coordinates": coords},
+                              "properties": {"id": p["id"], "street": p.get("street"), "d": p.get("diameter_mm")}})
+        PIPES_BY_ZONE[zone] = {"type": "FeatureCollection", "features": feats}
+    return PIPES_BY_ZONE[zone]
+
+
+class DemoLeakIn(BaseModel):
+    pipe_id: str
+    size: Literal["small", "medium", "large"] = "large"
+
+
+@router.post("/demo/leak", dependencies=[Depends(ADMIN_ONLY)])
+def demo_leak(body: DemoLeakIn):
+    """System test: put a leak on this pipe in the network (started 45 minutes ago), then run the detector on its zone.
+    The detector is not told about the leak; it only sees the meters."""
+    zone = api.PIPE_ZONE.get(body.pipe_id)
+    if zone not in api.ZONES:
+        raise HTTPException(400, "Pick a pipe inside a zone")
+    world_add_leak(body.pipe_id, body.size, NOW - 45 * 60)
+    refresh()
+    aid = detect_zone(zone)
+    flush()
+    if aid is None:
+        open_a = next((a for a in ALERTS.values() if a["zone"] == zone and a["status"] == "open" and a["kind"] != "public"), None)
+        msg = ("The zone already has an open alert, so no second alert was raised." if open_a else
+               "Test leak added. The meters do not show it clearly yet: a slow leak usually shows after 2 nights. "
+               "The detector checks every few minutes.")
+        return {"alert": None, "model_status": None, "message": msg}
+    return {"alert": aid, "model_status": ALERTS[aid]["model_status"], "detail": public_alert_view(ALERTS[aid])}
+
+
+
