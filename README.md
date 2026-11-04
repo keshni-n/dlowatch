@@ -291,6 +291,7 @@ Limits, say these in the pitch: everything is simulated on an illustrative netwo
 When someone takes a photo on the Report page, the phone checks it before sending (`frontend/src/app/shared/photo-check.ts`):
 
 - **Too dark**, **nearly blank** (camera covered) or **blurry**: the person sees why, with **Retake** or **Keep it anyway**. Nothing is ever blocked.
+- How: **too dark** when the photo is nearly black, or when even its brightest 5% is dim (a night photo with a streetlight still passes). **Blurry** uses the blur effect measure (Crete et al. 2007, the same as `skimage.measure.blur_effect`) on a 512 px copy: above 0.55 is blurry. Tested on sample photos: slight shake passes, 2% motion blur or more is caught.
 - The result goes with the report as a hint. Staff see it under the photo on Public reports ("Photo check: blurry (sent anyway)"), and crews see it on the job. It never changes the score, and the server does not trust it.
 - Limits are lenient on purpose, so a dark photo of a real burst at night still passes.
 - **A trained model can be added later:** put it in `PHOTO_MODEL` in `photo-check.ts` (for example a small MobileNet trained on "water or leak", "pipe", "not relevant" photos). It then also warns when a photo for "Water on the road" or "Broken pipe" does not look relevant.
