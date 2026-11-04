@@ -6,7 +6,7 @@ export type Role = 'operator' | 'admin' | 'manager' | 'crew';
 export interface User { sub: string; role: Role; name: string; crew_id?: string; }
 export interface LoginResult { token: string; user: User; }
 
-export interface JobSummary { id: string; crew: string; status: string; outcome: string | null; }
+export interface JobSummary { id: string; crew_id: string; crew: string; status: string; outcome: string | null; }
 
 export interface AlertItem {
   id: string; zone: string; zone_name: string; kind: 'slow' | 'burst' | 'public';
@@ -98,7 +98,7 @@ export interface PublicReportRow {
 }
 export interface Cluster { alert: string; kind: string; zone: string; zone_name: string; count: number; devices: number; street: string | null; minutes: number; score: number; }
 
-export interface Crew { id: string; name: string; people: string; base: string; state: 'busy' | 'available'; detail: string; }
+export interface Crew { id: string; name: string; people: string; base: string; state: 'busy' | 'available'; open_jobs: number; detail: string; }
 export interface Job {
   id: string; alert: string; zone: string; zone_name: string; crew_id: string; crew: string;
   status: 'sent' | 'on_the_way' | 'on_site' | 'done' | 'cancelled'; created: number; finished: number | null;
