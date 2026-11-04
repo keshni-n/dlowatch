@@ -21,3 +21,6 @@ Thumbs.db
 *.inp.ltown
 ltown_*.npz
 ltown_locator.joblib
+
+# Database (made on first start)
+backend/data/
