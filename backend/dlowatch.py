@@ -1816,7 +1816,18 @@ def alert_detail(aid: str):
         "if_not_fixed": if_not_fixed((a.get("search") or {}).get("m3_day")) if a["status"] == "open" else None,
         "suspects": (sp := suspects(a)), "households_est": households_near(zone, sp[:3]), "ease": repair_ease(sp),
         "inlet": api.ZONES[zone]["inlet"],
+        "crew_result": crew_result_view(JOBS.get(a.get("job"))),
     }
+
+
+def crew_result_view(j):
+    """What the crew logged when it closed the job, for the alert page. Photos are fetched separately."""
+    if not j or j.get("status") != "done":
+        return None
+    return {"job": j["id"], "crew": crew_name(j["crew_id"]), "outcome": j.get("outcome"),
+            "outcome_text": OUTCOMES.get(j.get("outcome")), "cause": j.get("cause"), "notes": j.get("notes"),
+            "finished": j.get("finished"), "found_at": j.get("found_at"), "fixed_at": j.get("fixed_at"),
+            "has_photo_before": bool(j.get("photo_before")), "has_photo_after": bool(j.get("photo_after"))}
 
 
 def usual(c, days):
@@ -2157,6 +2168,7 @@ def job_view(j):
         "pipes": top["pipes"] if top else [],
         "reports": job_reports(a),
         "loggers": job_loggers(a),
+        "has_photo_before": bool(j.get("photo_before")), "has_photo_after": bool(j.get("photo_after")),
     }
 
 
@@ -2254,7 +2266,8 @@ def crew_result(jid: str, body: ResultIn, user=Depends(CREW_ONLY)):
         now = int(time.time())
         j.update(status="done", finished=now, outcome=body.outcome, cause=body.cause, notes=body.notes,
                  found_at=body.found_at, fixed_at=body.fixed_at,
-                 photos=sum(1 for p in (body.photo_before, body.photo_after) if p))
+                 photos=sum(1 for p in (body.photo_before, body.photo_after) if p),
+                 photo_before=body.photo_before, photo_after=body.photo_after)
         a = ALERTS[j["alert"]]
         a["status"] = "resolved"
         a["resolved"] = now
@@ -2272,6 +2285,15 @@ def crew_result(jid: str, body: ResultIn, user=Depends(CREW_ONLY)):
                        "cause": body.cause, "by": crew_name(j["crew_id"]), "at": now,
                        "pipe": fixed["pipe_id"] if fixed else None})
         return job_view(j)
+
+
+@router.get("/jobs/{jid}/photos", dependencies=[Depends(STAFF_ONLY)])
+def job_photos(jid: str):
+    """The crew's before and after photos for a job. Separate from the job list because photos are big."""
+    j = JOBS.get(jid)
+    if not j:
+        raise HTTPException(404, "Unknown job")
+    return {"before": j.get("photo_before"), "after": j.get("photo_after")}
 
 
 # ============================================================== map data

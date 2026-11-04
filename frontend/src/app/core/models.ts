@@ -58,6 +58,7 @@ export interface AlertDetail extends AlertItem {
   loggers: { id: string; latlon: [number, number]; status: LoggerStatus; change_db: number; loud_nights: number;
              last_db: number; usual_db: number; distance_m: number | null }[];
   hearing_range_m: number;
+  crew_result: CrewResult | null;
   reports: PublicReportRow[];
   model: { leak_probability: number; leak_flow_lps?: number; water_lost_m3_per_day?: number; best_guess_latlon?: [number, number] };
   demo_truth?: { pipe_id: string; leak_flow_lps: number; water_lost_m3_per_day: number; latlon: [number, number] };
@@ -86,6 +87,10 @@ export interface MeterRow {
   fixes: Record<string, number>; issues: string; used: 'yes' | 'half' | 'no'; problem: string;
 }
 export interface DqRule { code: string; name: string; looks: string; fix: string; }
+export interface CrewResult {
+  job: string; crew: string; outcome: string | null; outcome_text: string | null; cause: string | null; notes: string | null;
+  finished: number | null; found_at: string | null; fixed_at: string | null; has_photo_before: boolean; has_photo_after: boolean;
+}
 export type LoggerStatus = 'noisy' | 'loud once' | 'quiet';
 export interface Logger {
   id: string; zone: string; zone_name: string; junction: string; lat: number; lon: number; main_road: boolean;
@@ -117,6 +122,7 @@ export interface Job {
   id: string; alert: string; zone: string; zone_name: string; crew_id: string; crew: string;
   status: 'sent' | 'on_the_way' | 'on_site' | 'done' | 'cancelled'; created: number; finished: number | null;
   outcome: string | null; outcome_text: string | null; cause: string | null; notes: string | null;
+  has_photo_before?: boolean; has_photo_after?: boolean;
   score: number; level: Level; why: string; reasons: string[]; streets: string[];
   latlon: [number, number] | null; search_radius_m: number | null; pipes: string[]; suspects: Suspect[];
   reports: JobReport[];
