@@ -4,7 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Api, errorText } from '../core/api';
 import { Auth } from '../core/auth';
 import { AgoPipe, DateTimePipe, LevelPipe, NumPipe, fmtDay } from '../core/format';
-import { AlertDetail } from '../core/models';
+import { AlertDetail, Crew } from '../core/models';
 import { LeakMap, MapCircle, MapPoint } from '../shared/leak-map';
 import { ChartBand, ChartSeries, LineChart } from '../shared/line-chart';
 
@@ -163,10 +163,19 @@ const AREA_COLORS = ['#E8590C', '#B9351C', '#7F95A6'];
                 <li>When it is fixed, the crew logs it and the night flow is checked again</li>
               </ol>
               <label class="field">Crew
-                <select class="input" [(ngModel)]="crew" name="crew">
-                  <option value="C1">Crew 1</option><option value="C2">Crew 2</option><option value="C3">Maintenance (meter problem)</option>
+                <select class="input" [ngModel]="crew" (ngModelChange)="crew = $event; crewTick.update(n => n + 1)" name="crew">
+                  @for (c of crews(); track c.id) {
+                    <option [value]="c.id">{{ c.name }} · {{ c.base }} · {{ c.state === 'busy' ? 'on a job' : 'free' }}</option>
+                  }
                 </select>
               </label>
+              @if (picked(); as c) {
+                @if (c.state === 'busy' && a.job?.crew_id !== c.id) {
+                  <div class="warn">{{ c.name }} is already busy: {{ c.detail }}{{ c.open_jobs > 1 ? ' and ' + (c.open_jobs - 1) + ' more' : '' }}. This job will wait in their list.</div>
+                } @else {
+                  <div class="tiny muted">{{ c.people }}</div>
+                }
+              }
               <div class="row">
                 <button class="btn" type="button" (click)="send()" [disabled]="busy()">{{ a.job ? 'Send again' : 'Send crew' }}</button>
                 <a class="btn secondary" [routerLink]="['/dashboard/replay', a.id]">Replay this leak</a>
@@ -240,6 +249,7 @@ const AREA_COLORS = ['#E8590C', '#B9351C', '#7F95A6'];
     .rejected { background: var(--chip); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
     tr.dim td { color: var(--muted); }
     .support { white-space: nowrap; }
+    .warn { font-size: 13px; background: var(--watch-pill); color: var(--text); border-radius: 8px; padding: 10px 12px; }
     .demo { font-size: 13px; background: var(--ai-pill); color: var(--ai-text); border-radius: 8px; padding: 12px 14px; }
   `],
 })
@@ -253,7 +263,10 @@ export class AlertDetailPage {
   error = signal('');
   busy = signal(false);
   msg = signal('');
-  crew = 'C1';
+  crew = '';
+  crews = signal<Crew[]>([]);
+  crewTick = signal(0);
+  picked = computed(() => { this.crewTick(); return this.crews().find(c => c.id === this.crew) ?? null; });
   pick = signal(1);
   highlight = computed(() => {
     const a = this.a();
@@ -318,9 +331,22 @@ export class AlertDetailPage {
       const a = await this.api.alert(id);
       this.a.set(a);
       this.error.set('');
+      await this.loadCrews();
       if (a.kind !== 'public') this.pipes.set(await this.api.mapPipes(a.zone));
       else this.pipes.set(null);
     } catch (e) { this.error.set(errorText(e)); }
+  }
+
+  async loadCrews() {
+    try {
+      const list = (await this.api.crews()).crews;
+      this.crews.set(list);
+      if (!list.some(c => c.id === this.crew)) {
+        // start on the first free leak crew, else the first crew
+        this.crew = (list.find(c => c.state === 'available' && !/maint/i.test(c.name)) ?? list[0])?.id ?? '';
+      }
+      this.crewTick.update(n => n + 1);
+    } catch { /* the page still works, the list just stays empty */ }
   }
 
   async send() {

@@ -691,6 +691,11 @@ REPORTS = {}     # code -> public report
 JOBS = {}        # job_id -> job
 LABELS = []      # crew results, used to test and retrain the model
 CREWS = PEOPLE["crews"]
+
+
+def crew_name(crew_id):
+    """Name of a crew. Old jobs can point to a crew that was later removed from people.json."""
+    return CREWS.get(crew_id, {}).get("name", crew_id)
 RULESET = scoring.ACTIVE           # newest ruleset, used for new alerts
 
 
@@ -1140,7 +1145,8 @@ def job_summary(job_id):
     j = JOBS.get(job_id) if job_id else None
     if not j:
         return None
-    return {"id": j["id"], "crew": CREWS[j["crew_id"]]["name"], "status": j["status"], "outcome": j.get("outcome")}
+    return {"id": j["id"], "crew_id": j["crew_id"], "crew": crew_name(j["crew_id"]),
+            "status": j["status"], "outcome": j.get("outcome")}
 
 
 def create_leak_alert(pipe_id, size, started, kind, fixed_at=None, demand_scale=1.0, sensor_noise_mm=0.0, rng=None, coeff=None):
@@ -1245,7 +1251,8 @@ def add_report(body: ReportIn, at=None):
         zone = point_in_zone(body.lat, body.lon)
         r = {"code": code, "created": at or int(time.time()), "lat": round(body.lat, 4), "lon": round(body.lon, 4),
              "kind": body.kind, "note": body.note, "device": hashlib.sha256(body.device.encode()).hexdigest()[:12],
-             "photo": body.photo, "zone": zone, "alert": None, "cluster": None}
+             "photo": body.photo, "zone": zone, "alert": None, "cluster": None,
+             "photo_check": body.photo_check.model_dump() if body.photo and body.photo_check else None}
         REPORTS[code] = r
         link_report(r)
         return r
@@ -1674,7 +1681,7 @@ def alert_replay(aid: str):
                        "detail": f"{REPORT_KINDS[r['kind']][1]}, sent from the public page."})
     j = JOBS.get(a.get("job")) if a.get("job") else None
     if j:
-        ev.append({"t": j["created"], "tag": "Crew", "title": f"{CREWS[j['crew_id']]['name']} sent",
+        ev.append({"t": j["created"], "tag": "Crew", "title": f"{crew_name(j['crew_id'])} sent",
                    "detail": "Job sent to the crew phone."})
         if j.get("finished"):
             ev.append({"t": j["finished"], "tag": "Crew", "title": "Crew logs the result",
@@ -1686,7 +1693,7 @@ def alert_replay(aid: str):
 
 
 class DispatchIn(BaseModel):
-    crew_id: Literal["C1", "C2", "C3"]
+    crew_id: str
     note: Optional[str] = None
 
 
@@ -1696,6 +1703,8 @@ def dispatch(aid: str, body: DispatchIn, user=Depends(OPS_ONLY)):
         a = ALERTS.get(aid)
         if not a or a["status"] != "open":
             raise HTTPException(404, "No open alert with this id")
+        if body.crew_id not in CREWS:
+            raise HTTPException(400, "Unknown crew. Crews are set in config/people.json.")
         old = JOBS.get(a.get("job")) if a.get("job") else None
         if old and old["status"] != "done":
             old["status"] = "cancelled"
@@ -1827,7 +1836,7 @@ def report_photo(code: str):
 def report_to_alert(code: str, user=Depends(OPS_ONLY)):
     """Operator opens an alert from a single report (a clear photo of a broken pipe, say), so a crew can be sent.
     Other reports on their own within 150 m in the last 24 h join it. Public reports alone still score Watch at most."""
-    with LOCK, store.transaction():
+    with LOCK:
         r = REPORTS.get(code)
         if not r:
             raise HTTPException(404, "No report with this code")
@@ -1847,10 +1856,8 @@ def report_to_alert(code: str, user=Depends(OPS_ONLY)):
                        "search": {"source": "reports", "best_guess": [lat, lon], "areas": [], "flow_lps": None, "m3_day": None},
                        "dp_mm": {}, "latlon": [lat, lon], "streets": streets_of(pipes_near(r["zone"], lat, lon, 150)),
                        "reports": [x["code"] for x in group], "job": None, "events": [], "opened_by": user["name"]}
-        store.save_alert(ALERTS[aid])
         for x in group:
             x["alert"] = aid
-            store.save_report(x)
         log.warning("Alert %s opened from report %s by %s", aid, code, user["name"])
         return {"alert": aid}
 
@@ -1866,7 +1873,6 @@ def forward_report(code: str, user=Depends(OPS_ONLY)):
             raise HTTPException(400, "This report is inside our network. Open an alert from it instead.")
         if not r.get("forwarded"):
             r["forwarded"], r["forwarded_by"] = int(time.time()), user["name"]
-            store.save_report(r)
         return report_view(r)
 
 
@@ -1875,7 +1881,7 @@ def crews():
     out = []
     for c in CREWS.values():
         active = [j for j in JOBS.values() if j["crew_id"] == c["id"] and j["status"] in ("sent", "on_the_way", "on_site")]
-        out.append({**c, "state": "busy" if active else "available",
+        out.append({**c, "state": "busy" if active else "available", "open_jobs": len(active),
                     "detail": job_line(active[0]) if active else c["base"]})
     jobs = sorted(JOBS.values(), key=lambda j: -j["created"])
     return {"crews": out, "jobs": [job_view(j) for j in jobs], "labels": LABELS[-20:][::-1]}
@@ -1898,7 +1904,7 @@ def job_view(j):
     lat_lon = srch.get("best_guess") or a.get("latlon")
     return {
         "id": j["id"], "alert": a["id"], "zone": a["zone"], "zone_name": ZONE_NAMES.get(a["zone"]),
-        "crew_id": j["crew_id"], "crew": CREWS[j["crew_id"]]["name"], "status": j["status"],
+        "crew_id": j["crew_id"], "crew": crew_name(j["crew_id"]), "status": j["status"],
         "created": j["created"], "finished": j.get("finished"), "outcome": j.get("outcome"),
         "outcome_text": OUTCOMES.get(j.get("outcome")), "cause": j.get("cause"), "notes": j.get("notes"),
         "score": s["score"], "level": s["level"], "why": headline(a, s),
@@ -2009,7 +2015,7 @@ def crew_result(jid: str, body: ResultIn, user=Depends(CREW_ONLY)):
         if a["id"] in api.ALERTS:
             api.ALERTS[a["id"]]["status"] = "resolved"
         LABELS.append({"id": f"L-{len(LABELS) + 1}", "alert": a["id"], "zone": a["zone"], "label": body.outcome,
-                       "cause": body.cause, "by": CREWS[j["crew_id"]]["name"], "at": now,
+                       "cause": body.cause, "by": crew_name(j["crew_id"]), "at": now,
                        "pipe": fixed["pipe_id"] if fixed else None})
         return job_view(j)
 
@@ -2134,7 +2140,7 @@ def water_report(days: Optional[int] = None):
             since = max(a["resolved"], start)
             fixed.append({"alert": a["id"], "zone": a["zone"], "zone_name": ZONE_NAMES[a["zone"]], "fixed": a["resolved"],
                           "m3_per_day": per_day, "saved_m3_in_period": round(per_day * max(0, NOW - since) / 86400),
-                          "cause": j.get("cause"), "crew": CREWS[j["crew_id"]]["name"]})
+                          "cause": j.get("cause"), "crew": crew_name(j["crew_id"])})
     open_rows = repair_items()
     total_in = sum(z["water_in_m3"] for z in zones)
     total_exp = sum(z["expected_m3"] for z in zones)
