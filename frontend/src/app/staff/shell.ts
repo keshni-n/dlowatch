@@ -28,6 +28,7 @@ import { Logo, ThemeToggle } from '../shared/bits';
           }
         </div>
         <div class="foot">
+          <span class="proto" role="note">Prototype with simulated network data. Not an official CWA system.</span>
           @if (sys(); as st) {
             <span class="status" [class.bad]="st.model.status !== 'online'">
               <i></i>{{ st.model.status === 'online' ? 'All systems running' : 'AI assist offline, rules still running' }}
@@ -57,6 +58,7 @@ import { Logo, ThemeToggle } from '../shared/bits';
     .badge.blue { background: #9CCBF2; color: var(--text); }
     .demo { font-size: 11px; background: #2A3F4E; color: #C9D6DF; padding: 1px 6px; border-radius: 6px; margin-left: 6px; }
     .foot { margin-top: auto; border-top: 1px solid var(--ink-line); padding-top: 16px; font-size: 13px; color: #B5C4CF; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+    .proto { font-size: 12px; line-height: 1.4; color: #9FB2C0; border: 1px solid var(--ink-line); border-radius: 8px; padding: 6px 8px; }
     .status { display: inline-flex; align-items: center; gap: 8px; color: #C9D6DF; text-decoration: none; }
     .status i { width: 8px; height: 8px; border-radius: 99px; background: #5FB3F0; display: inline-block; }
     .status.bad { color: #F6B07C; } .status.bad i { background: #F6B07C; }

@@ -21,6 +21,7 @@ import { LangSwitch, Logo, ThemeToggle } from '../shared/bits';
           <div class="tools"><dw-lang /><dw-theme-toggle /></div>
         </div>
       </header>
+      <div class="proto" role="note">{{ i.t('prototype') }}</div>
       <main class="content"><router-outlet /></main>
       <nav class="tabs" aria-label="Main">
         @for (t of tabs; track t.path) {
@@ -52,6 +53,7 @@ import { LangSwitch, Logo, ThemeToggle } from '../shared/bits';
     .desk a.cta { background: var(--blue); color: #fff; order: 9; margin-left: auto; }
     .desk a.cta.on, .desk a.cta:hover { background: var(--blue-dark); color: #fff; }
     .tools { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .proto { background: var(--ground); border-bottom: 1px solid var(--line); color: var(--text-2); font-size: 12.5px; line-height: 1.4; text-align: center; padding: 7px 16px; }
     .content { flex: 1; width: 100%; max-width: 1120px; margin: 0 auto; padding: 18px 16px 96px; }
     .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--surface); border-top: 1px solid var(--line);
       display: grid; grid-template-columns: repeat(5, 1fr); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
