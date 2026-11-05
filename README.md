@@ -33,6 +33,46 @@ python generate_leak_dataset.py --network output_north
 python train_models.py --network output_north
 ```
 
+## Models, data and APIs used
+
+**AI models** (scikit-learn 1.6.1, `backend/train_models.py`). One set of 4 per zone, 8 zones, saved as `output_north/models/zone_Z*.joblib`.
+Inputs: the pressure drop at each sensor and the change in inlet flow.
+
+| Model | Type | What it answers |
+|---|---|---|
+| Detector | RandomForestClassifier, 200 trees | Is there a leak in this zone? |
+| Locator | ExtraTreesClassifier, 300 trees | Which search area is it in? |
+| Point | RandomForestRegressor, 200 trees | Best-guess point (x, y) |
+| Sizer | RandomForestRegressor, 200 trees | How big is it (litres per second)? |
+
+**Rules engine** (`backend/scoring.py`, rulesets `backend/rules/wl-1.0.json` to `wl-1.5.json`). The rules give the alert score and its reasons. The AI models can add at most 20 points, only when the meters agree.
+
+**Photo checks.** On the phone: brightness, blank photo and blur checks, no model (`shared/photo-check.ts` has a slot for a model, not used). On the server: copies of the same photo are caught with a difference hash (Pillow).
+
+**Simulation.** EPANET, run through WNTR, for the training data, the live network and the evaluation.
+
+**Data**
+
+| Data | Source |
+|---|---|
+| Streets of north Mauritius | OpenStreetMap, downloaded with osmnx through the Overpass API. (c) OpenStreetMap contributors, ODbL |
+| Pipes, zones, demand, sensors, meter and noise readings, leaks | Simulated by us, see "How the demo data was made" |
+| Benchmark for the rules | BattLeDIM 2020 L-Town (https://github.com/KIOS-Research/BattLeDIM) |
+
+No real CWA data and no real personal data is used.
+
+**Outside services the app calls while running**
+- Map tiles from OpenStreetMap (`tile.openstreetmap.org`), shown with Leaflet 1.9
+- Google Fonts (IBM Plex Sans and IBM Plex Mono)
+
+No paid APIs and no AI or chatbot APIs. The models run on our own backend.
+
+**Libraries**
+- Backend (Python 3.13): FastAPI, Uvicorn, WNTR, osmnx, pandas, numpy, networkx, pyproj, scikit-learn, joblib, Pillow, matplotlib, SQLite (built into Python). Optional: rasterio (for `--dem`), folium (only for the `view_*_map.py` previews)
+- Frontend: Angular 22, Leaflet, Angular service worker (PWA)
+
+**Our own API.** All endpoints are under `/api` (auth, public, staff, crew, map, system). With the backend running, the full list is at http://localhost:8000/docs.
+
 ## Run it (2 terminals)
 
 **1. Backend**
@@ -342,7 +382,7 @@ The BattLeDIM L-Town test is different: that network, its demand and its leak li
 - The public side shows leak notices (a zone, a street, or the middle of a group of reports), never a single report's location or who sent it. A report's status can only be seen with its code.
 - Staff and crew accounts are separate, and the manager account can only view.
 
-**Honesty.** The screens look like a deployed system, so the pitch must say that the network and readings are simulated (see "Be honest in the pitch"). The evaluation lists its limits, and the BattLeDIM test shows where the system is weak (finding the exact place).
+**Honesty.** The screens look like a deployed system, so each one shows a prototype note, and the pitch must say that the network and readings are simulated (see "Be honest in the pitch"). The evaluation lists its limits, and the BattLeDIM test shows where the system is weak (finding the exact place).
 
 **Risks we know about.**
 - A false alarm can send a crew for nothing. That is why public reports alone stay at Watch, and why an alert needs night flow to stay high 2 nights.
@@ -388,4 +428,4 @@ Security notes:
 ## Be honest in the pitch
 
 The network is built from real OpenStreetMap streets, but pipe sizes, demand, reservoirs and elevations are assumed,
-and the meter and noise logger readings are simulated. It is not real CWA data. The screens are kept clean like a deployed system, so say this yourself in the pitch. Accounts and test results are only in this README, not on screen.
+and the meter and noise logger readings are simulated. It is not real CWA data. Every screen carries a short prototype note (public pages, staff menu and sign in, crew sign in), as the hackathon rules ask, but say it yourself in the pitch too. Accounts and test results are only in this README, not on screen.
