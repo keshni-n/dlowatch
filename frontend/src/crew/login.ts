@@ -26,6 +26,7 @@ import { Logo } from '../shared/bits';
         @if (error()) { <div class="error" role="alert">{{ error() }}</div> }
         <button class="btn block light" type="submit" [disabled]="busy()">{{ busy() ? 'Signing in...' : 'Sign in' }}</button>
         <div class="foot small">
+          <span role="note">Prototype with simulated jobs. Not an official CWA system.</span>
           <span>Lost your PIN? Call the control room.</span>
           <span>Not crew? <a routerLink="/">Report a leak instead</a></span>
         </div>
