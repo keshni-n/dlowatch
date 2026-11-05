@@ -33,6 +33,7 @@ import { Logo, ThemeToggle } from '../shared/bits';
           </label>
           @if (error()) { <div class="error" role="alert">{{ error() }}</div> }
           <button class="btn block" type="submit" [disabled]="busy()">{{ busy() ? 'Signing in...' : 'Sign in' }}</button>
+          <div class="small muted" role="note">Prototype for Tech Wave 2026. The network, meters and leaks are simulated. Not an official CWA system.</div>
           <div class="small other">Not staff? <a routerLink="/">Report a leak without an account</a> · <a routerLink="/crew/login">Crew sign in</a></div>
         </form>
       </section>

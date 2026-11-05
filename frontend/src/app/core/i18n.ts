@@ -22,6 +22,11 @@ const T: Record<string, Record<Lang, string>> = {
   noName: { kreol: 'Nou pa demann ou nom ni ou nimero.', fr: 'On ne demande ni nom ni numero.', en: 'We never ask for your name or number.' },
   goesTo: { kreol: 'Ou rapor al direk kot sant kontrol dlo.', fr: "Votre signalement va directement au centre de controle.", en: "Your report goes straight to the water utility's control room." },
   staff: { kreol: 'Staff?', fr: 'Personnel ?', en: 'Staff?' },
+  prototype: {
+    kreol: 'Prototip pou Tech Wave 2026, avek done simile. Se pa enn servis ofisiel CWA: pou enn vre fwit, kontakte CWA.',
+    fr: "Prototype pour Tech Wave 2026, avec des donnees simulees. Ce n'est pas un service officiel de la CWA : pour une vraie fuite, contactez la CWA.",
+    en: 'Prototype for Tech Wave 2026, using simulated data. Not an official CWA service: to report a real leak, contact CWA.',
+  },
   title: { kreol: 'Ou finn trouv enn fwit dlo?', fr: 'Vous avez vu une fuite ?', en: 'Spotted a water leak?' },
   takes: { kreol: 'Pran 30 segonn.', fr: 'Cela prend 30 secondes.', en: 'Takes 30 seconds.' },
   photo: { kreol: 'Pran enn foto', fr: 'Prendre une photo', en: 'Take a photo' },

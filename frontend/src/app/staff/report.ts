@@ -1,180 +1,149 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { Api, errorText } from '../core/api';
-import { Auth } from '../core/auth';
-import { AgoPipe, TimePipe } from '../core/format';
-import { Cluster, PublicReportRow } from '../core/models';
-import { LeakMap, MapPoint } from '../shared/leak-map';
+import { DateTimePipe, NumPipe, fmtDay } from '../core/format';
+import { WaterReport } from '../core/models';
+import { ChartSeries, LineChart } from '../shared/line-chart';
 
-const STATE: Record<string, { text: string; cls: string }> = {
-  linked: { text: 'Linked to alert', cls: 'critical' }, cluster: { text: 'In a cluster', cls: 'watch' },
-  new: { text: 'New', cls: 'low' }, fixed: { text: 'Fixed', cls: 'ok' },
-  outside: { text: 'Outside our area', cls: 'neutral' }, forwarded: { text: 'Forwarded', cls: 'ok' },
-};
-
+/** Weekly water loss report for the network manager: lost, saved, money, worst zones, and how well the system works. */
 @Component({
-  selector: 'dw-reports',
-  imports: [RouterLink, LeakMap, AgoPipe, TimePipe],
+  selector: 'dw-report',
+  imports: [RouterLink, LineChart, NumPipe, DateTimePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="stack page">
       <header class="row between">
-        <div><h1>Public reports</h1>
-          <p class="muted">Sent from the public phone page. No names or phone numbers are stored.</p></div>
-        <div class="row" role="group" aria-label="Filter">
-          @for (f of filters; track f.key) {
-            <button type="button" class="btn" [class.ghost]="filter() !== f.key" [class.dark]="filter() === f.key"
-                    [attr.aria-pressed]="filter() === f.key" (click)="filter.set(f.key)">{{ f.label }} ({{ count(f.key) }})</button>
-          }
+        <div>
+          @if (r(); as r) { <div class="small muted mono">{{ r.start | dateTime }} to {{ r.end | dateTime }}</div> }
+          <h1>Water loss report</h1>
+          <p class="muted lead">Water lost, water saved by repairs, and which zones lose the most.</p>
+        </div>
+        <div class="row no-print">
+          <label class="row small">Period
+            <select class="input narrow" [value]="days()" (change)="days.set(+$any($event.target).value)">
+              <option value="7">Last 7 days</option><option value="3">Last 3 days</option><option value="13">Last 13 days</option>
+            </select></label>
+          <button type="button" class="btn ghost" (click)="csv()" [disabled]="!r()">Download CSV</button>
+          <button type="button" class="btn secondary" (click)="print()">Print or save as PDF</button>
         </div>
       </header>
       @if (error()) { <div class="error">{{ error() }}</div> }
 
-      <section class="clusters">
-        @for (c of clusters(); track c.alert) {
-          <div class="card stack cl">
-            <div class="row between">
-              <span class="kicker" [class.red]="c.kind !== 'public'">{{ c.kind === 'public' ? 'Cluster · no meter alert yet' : 'Cluster · linked to a meter alert' }}</span>
-              <span class="mono small"><b>score {{ c.score }}</b></span>
+      @if (r(); as r) {
+        <section class="kpis">
+          <div class="card kpi"><div class="label">Water put in</div><div class="value">{{ r.totals.water_in_m3 | num }} m³</div>
+            <div class="sub">Expected use {{ r.totals.expected_m3 | num }} m³</div></div>
+          <div class="card kpi dark"><div class="label">Water lost</div><div class="value sand">{{ r.totals.lost_m3 | num }} m³</div>
+            <div class="sub">More than expected use, all zones</div></div>
+          <div class="card kpi"><div class="label">Saved by repairs</div><div class="value blue">{{ r.totals.saved_m3 | num }} m³</div>
+            <div class="sub">{{ r.totals.repairs_done }} repair{{ r.totals.repairs_done === 1 ? '' : 's' }}, now {{ r.totals.saved_per_day_m3 | num }} m³ a day less</div></div>
+          <div class="card kpi"><div class="label">Still losing</div><div class="value">{{ r.totals.still_losing_m3_per_day | num }} m³/day</div>
+            <div class="sub">Estimated, {{ r.totals.open_leaks }} open leak{{ r.totals.open_leaks === 1 ? '' : 's' }} · <a routerLink="/dashboard/repairs">repair list</a></div></div>
+        </section>
+
+        <section class="card money">
+          @if (r.money; as m) {
+            <div class="row between"><h2>Money</h2><span class="small muted">at {{ m.currency }} {{ m.cost_per_m3 }} per m³</span></div>
+            <div class="mrow">
+              <div><div class="tiny muted">Lost</div><b class="mono">{{ m.currency }} {{ m.lost | num }}</b></div>
+              <div><div class="tiny muted">Saved by repairs</div><b class="mono">{{ m.currency }} {{ m.saved | num }}</b></div>
+              <div><div class="tiny muted">Still losing</div><b class="mono">{{ m.currency }} {{ m.still_losing_per_day | num }} a day</b></div>
             </div>
-            <div class="title">{{ c.zone_name }}{{ c.street ? ', ' + c.street : '' }}</div>
-            <div class="small">{{ c.count }} reports from {{ c.devices }} different phones, within {{ c.minutes }} minutes.
-              {{ c.kind === 'public' ? 'The meters here look normal, so this raised the zone to Watch.' : 'Matches the meter alert in this zone.' }}</div>
-            <a class="small strong" [routerLink]="['/dashboard/alerts', c.alert]">Open the alert</a>
-          </div>
-        } @empty { <div class="card muted">No clusters right now.</div> }
-      </section>
-
-      <section class="row two">
-        <div class="card grow table-card">
-          <h2>All reports</h2>
-          <div class="table-wrap">
-            <table class="data">
-              <thead><tr><th>Code</th><th>Time</th><th>Area</th><th>What they saw</th><th>Photo</th><th>Status</th></tr></thead>
-              <tbody>
-                @for (r of shown(); track r.code) {
-                  <tr>
-                    <td class="mono nowrap"><b>{{ r.code }}</b></td>
-                    <td class="mono small">{{ r.created | time }}<div class="tiny muted">{{ r.created | ago }}</div></td>
-                    <td>{{ r.zone_name }}</td>
-                    <td>{{ r.kind_kreol }} <span class="muted small">· {{ r.kind_en }}</span>@if (r.note) {<div class="tiny muted">"{{ r.note }}"</div>}</td>
-                    <td>@if (r.has_photo) {<button type="button" class="btn ghost mini" (click)="showPhoto(r.code)">View</button>
-                          @if (r.photo_hint) { <div class="tiny hint" [class.warn]="r.photo_ok === false">{{ r.photo_hint }}</div> }
-                        } @else {<span class="muted small">No</span>}</td>
-                    <td>
-                      <span class="pill" [class]="state(r.status).cls">{{ state(r.status).text }}</span>
-                      @if (r.alert) { <div><a class="tiny" [routerLink]="['/dashboard/alerts', r.alert]">alert</a></div> }
-                      @if (r.status === 'forwarded') { <div class="tiny muted">by {{ r.forwarded_by }}, {{ r.forwarded! | ago }}</div> }
-                      @if (auth.canAct()) {
-                        @if (r.status === 'new') {
-                          <button type="button" class="btn mini act" (click)="openAlert(r.code)" [disabled]="busy()">Create alert</button>
-                        } @else if (r.status === 'outside') {
-                          <button type="button" class="btn ghost mini act" (click)="forward(r.code)" [disabled]="busy()">Forward</button>
-                        }
-                      }
-                    </td>
-                  </tr>
-                } @empty { <tr><td colspan="6" class="muted">No reports.</td></tr> }
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div class="card side stack">
-          <h2>On the map</h2>
-          <dw-leak-map [points]="points()" [height]="320" fitTo="circles" />
-          @if (photo()) {
-            <figure><img [src]="photo()" alt="Photo sent with the report"><figcaption class="tiny muted">Photo from {{ photoCode() }}</figcaption></figure>
+          } @else {
+            <h2>Money</h2>
+            <p class="small muted">{{ r.money_note }}</p>
           }
-        </div>
-      </section>
+        </section>
 
-      <section class="card dark stack">
-        <h2>Keeping fake or repeat reports out</h2>
-        <ul class="rules">
-          <li>A cluster needs 3 different phones, not 3 reports from one</li>
-          <li>Public reports alone can raise a zone to Watch, never higher</li>
-          <li>Only reports from the last 24 hours, within 150 m of each other, are grouped</li>
-          <li>The phone id is hashed. No name, number or exact home address is kept</li>
-          <li>One clear report can be opened as an alert by an operator, so a crew can be sent</li>
-          <li>Reports outside our network are never grouped. Forward them to the team for that area</li>
-        </ul>
-      </section>
+        <section class="card stack">
+          <h2>Water lost each day</h2>
+          <dw-line-chart [series]="dailySeries()" xMode="day" unit="m³" [yMin]="0" [height]="210" ariaLabel="Water lost per day" />
+        </section>
+
+        <section class="row two">
+          <div class="card grow stack">
+            <h2>Zones, most water lost first</h2>
+            <div class="table-wrap">
+              <table class="data">
+                <thead><tr><th>Zone</th><th class="r">Water in</th><th class="r">Lost</th><th class="r">Lost %</th><th class="r">Alerts</th><th class="r">Data</th></tr></thead>
+                <tbody>
+                  @for (z of r.zones; track z.zone; let i = $index) {
+                    <tr [class.worst]="i < 3 && z.lost_m3 > 0">
+                      <td><b>{{ z.name }}</b><span class="mono tiny code">{{ z.zone }}</span></td>
+                      <td class="r mono">{{ z.water_in_m3 | num }}</td><td class="r mono"><b>{{ z.lost_m3 | num }}</b></td>
+                      <td class="r mono">{{ z.lost_pct }}%</td><td class="r mono">{{ z.alerts }}</td><td class="r mono">{{ z.data_coverage_pct }}%</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            <p class="tiny muted">Data = share of meter readings received. {{ r.note }}</p>
+          </div>
+          <div class="card side stack">
+            <h2>Repairs</h2>
+            @for (f of r.fixed; track f.alert) {
+              <div class="fix"><b>{{ f.zone_name }}</b> · {{ f.cause || 'leak' }}<div class="small muted">{{ f.crew }}, {{ f.fixed | dateTime }} · {{ f.m3_per_day | num }} m³ a day stopped</div></div>
+            } @empty { <p class="small muted">No repairs logged in this period.</p> }
+            <div class="small muted">{{ r.totals.alerts_raised }} alerts raised, {{ r.totals.reports }} public reports in the period.</div>
+          </div>
+        </section>
+      } @else if (!error()) { <div class="skeleton">Building the report...</div> }
+
     </div>
   `,
   styles: [`
-    .page { gap: 20px; max-width: 1280px; } h1 { font-size: 32px; }
-    .clusters { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
-    .cl { gap: 8px; }
-    .kicker { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--watch-text); }
-    .kicker.red { color: var(--crit-text); }
-    .title { font-size: 20px; font-weight: 700; }
-    .strong { font-weight: 600; }
-    .two { gap: 16px; align-items: stretch; }
-    .table-card { flex: 3 1 560px; }
-    .side { flex: 2 1 320px; }
-    .nowrap { white-space: nowrap; }
-    .mini { min-height: 34px; padding: 0 12px; font-size: 13px; }
-    .act { margin-top: 6px; white-space: nowrap; }
-    .hint { margin-top: 4px; color: var(--muted); max-width: 170px; }
-    .hint.warn { color: var(--watch-text); font-weight: 600; }
-    figure { margin: 0; } figure img { width: 100%; border-radius: 10px; border: 1px solid var(--line); }
-    .rules { margin: 0; padding-left: 18px; color: #D3DEE6; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 8px 28px; font-size: 14px; }
+    .page { gap: 18px; max-width: 1280px; }
+    h1 { font-size: 32px; margin-top: 4px; } .lead { margin: 6px 0 0; }
+    .narrow { width: auto; height: 40px; font-size: 14px; }
+    .sand { color: var(--sand); } .blue { color: var(--link); }
+    .money { display: flex; flex-direction: column; gap: 10px; }
+    .mrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; font-size: 18px; }
+    .two { gap: 16px; align-items: stretch; } .two > .grow { flex: 3 1 520px; } .side { flex: 2 1 280px; }
+    .r { text-align: right; } .code { margin-left: 6px; color: var(--muted); }
+    tr.worst td { background: var(--high-pill); }
+    .fix { border-bottom: 1px solid var(--line-soft); padding-bottom: 8px; }
+    @media print { .no-print { display: none !important; } .card { break-inside: avoid; } }
   `],
 })
-export class ReportsPage {
+export class ReportPage {
   private api = inject(Api);
-  private router = inject(Router);
-  auth = inject(Auth);
-  busy = signal(false);
-  reports = signal<PublicReportRow[]>([]);
-  clusters = signal<Cluster[]>([]);
-  filter = signal<'all' | 'grouped' | 'alone'>('all');
-  photo = signal('');
-  photoCode = signal('');
+  days = signal(7);
+  r = signal<WaterReport | null>(null);
   error = signal('');
-  filters = [{ key: 'all' as const, label: 'All' }, { key: 'grouped' as const, label: 'Linked or in a cluster' }, { key: 'alone' as const, label: 'On their own' }];
-  state = (s: string) => STATE[s] ?? { text: s, cls: 'neutral' };
 
-  shown = computed(() => this.reports().filter(r => this.match(r, this.filter())));
-  points = computed<MapPoint[]>(() => this.reports().map(r => ({
-    latlon: [r.lat, r.lon] as [number, number], size: 7, label: `${r.code}: ${r.kind_en}`,
-    color: r.status === 'linked' ? '#B9351C' : r.status === 'cluster' ? '#E0A33B' : r.status === 'fixed' ? '#2F8F5B' : '#0B5FA5',
-  })));
+  dailySeries = computed<ChartSeries[]>(() => {
+    const d = this.r()?.daily ?? [];
+    return [{ t: d.map(x => x.day + 43200), v: d.map(x => x.lost_m3), color: '#C2410C', width: 3, label: 'Water lost (m³)' }];
+  });
 
-  constructor() { this.load(); }
-
-  match(r: PublicReportRow, f: string) { return f === 'all' || (f === 'grouped' ? !!r.alert : !r.alert); }
-  count(f: string) { return this.reports().filter(r => this.match(r, f)).length; }
-
-  async load() {
-    try {
-      const d = await this.api.reports();
-      this.reports.set(d.reports);
-      this.clusters.set(d.clusters);
-    } catch (e) { this.error.set(errorText(e)); }
+  constructor() {
+    effect(() => { this.load(this.days()); });
   }
 
-  async openAlert(code: string) {
-    this.busy.set(true);
-    try {
-      const r = await this.api.reportToAlert(code);
-      this.router.navigate(['/dashboard/alerts', r.alert]);
-    } catch (e) { this.error.set(errorText(e)); }
-    this.busy.set(false);
-  }
-
-  async forward(code: string) {
-    if (!confirm(`Mark ${code} as forwarded to the team for that area? The person who reported will see it on their status page.`)) return;
-    this.busy.set(true);
-    try {
-      await this.api.forwardReport(code);
-      await this.load();
-    } catch (e) { this.error.set(errorText(e)); }
-    this.busy.set(false);
-  }
-
-  async showPhoto(code: string) {
-    try { this.photo.set((await this.api.reportPhoto(code)).photo); this.photoCode.set(code); }
+  async load(days: number) {
+    try { this.r.set(await this.api.report(days)); this.error.set(''); }
     catch (e) { this.error.set(errorText(e)); }
+  }
+
+  print() { window.print(); }
+
+  /** Zone table and daily losses as a CSV file, for Excel. */
+  csv() {
+    const r = this.r();
+    if (!r) return;
+    const rows: (string | number)[][] = [
+      ['DloWatch water loss report', `${fmtDay(r.start)} to ${fmtDay(r.end)}`], [],
+      ['Zone', 'Area', 'Water in (m3)', 'Expected (m3)', 'Lost (m3)', 'Lost %', 'Alerts', 'Data received %'],
+      ...r.zones.map(z => [z.zone, z.name, z.water_in_m3, z.expected_m3, z.lost_m3, z.lost_pct, z.alerts, z.data_coverage_pct]),
+      [], ['Day', 'Water lost (m3)'], ...r.daily.map(d => [fmtDay(d.day + 43200), d.lost_m3]),
+      [], ['Total lost (m3)', r.totals.lost_m3], ['Saved by repairs (m3)', r.totals.saved_m3], ['Still losing (m3/day)', r.totals.still_losing_m3_per_day],
+    ];
+    const text = rows.map(row => row.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob(['﻿' + text], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dlowatch-report-${r.days}-days.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 }
